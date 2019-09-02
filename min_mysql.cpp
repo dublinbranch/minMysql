@@ -1,12 +1,31 @@
 #include "min_mysql.h"
-#include "common.h"
 #include "mysql/mysql.h"
-#include "stacker.h"
 #include <QDateTime>
 #include <QDebug>
 #include <QMap>
 #include <mutex>
 #include <QDataStream>
+#include <QFile>
+
+#define QBL(str) QByteArrayLiteral(str)
+#define QSL(str) QStringLiteral(str)
+
+QByteArray QStacker(uint skip=0);
+
+class QFileXT2 : public QFile {
+      public:
+	bool open(OpenMode flags) override;
+};
+
+
+bool QFileXT2::open(QIODevice::OpenMode flags) {
+	if (!QFile::open(flags)) {
+		qCritical().noquote() << errorString() << "opening" << fileName() << "\n"
+		                      << QStacker();
+		return false;
+	}
+	return true;
+}
 
 QString base64this(const QByteArray& param) {
 	return "FROM_BASE64('" + param.toBase64() + "')";
@@ -47,7 +66,7 @@ struct SaveSql {
 
 		//we keep open a file and just append from now on...
 		//for the moment is just a single file later... who knows
-		static QFileXT file;
+		static QFileXT2 file;
 		if (!file.isOpen()) {
 			file.setFileName("sql.log");
 			if (!file.open(QIODevice::WriteOnly | QIODevice::Append)) {
