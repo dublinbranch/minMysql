@@ -1,22 +1,21 @@
 #include "min_mysql.h"
 #include "mysql/mysql.h"
+#include <QDataStream>
 #include <QDateTime>
 #include <QDebug>
+#include <QFile>
 #include <QMap>
 #include <mutex>
-#include <QDataStream>
-#include <QFile>
 
 #define QBL(str) QByteArrayLiteral(str)
 #define QSL(str) QStringLiteral(str)
 
-QByteArray QStacker(uint skip=0);
+QByteArray QStacker(uint skip = 0);
 
 class QFileXT2 : public QFile {
       public:
 	bool open(OpenMode flags) override;
 };
-
 
 bool QFileXT2::open(QIODevice::OpenMode flags) {
 	if (!QFile::open(flags)) {
@@ -56,6 +55,14 @@ sqlResult MySQL_query(st_mysql* conn, const QString& sql) {
 	return query(conn, sql.toUtf8());
 }
 
+sqlResult DB::query(const QString& sql) const {
+	return MySQL_query(this->conn, sql);
+}
+
+sqlResult DB::query(const QByteArray& sql) const {
+	return MySQL_query(this->conn, sql);
+}
+
 struct SaveSql {
 	SaveSql(const QByteArray& _sql, const sqlResult* _res)
 	    : sql(_sql), res(_res) {
@@ -78,7 +85,7 @@ struct SaveSql {
 		QString   time       = myDateTime.toString(Qt::ISODateWithMs);
 
 		file.write(time.toUtf8() + QBL("\nErroCode: ") + QByteArray::number(erroCode) + QBL("\t\t") + sql);
-		if(res && !res->isEmpty()){
+		if (res && !res->isEmpty()) {
 			file.write("\n");
 			QDebug dbg(&file);
 			dbg << (*res);
@@ -95,7 +102,7 @@ sqlResult query(st_mysql* conn, const QByteArray& sql) {
 	QList<sqlRow> res;
 	res.reserve(512);
 
-	SaveSql save(sql,&res);
+	SaveSql save(sql, &res);
 	if (conn == nullptr) {
 		qCritical() << "This mysql instance is not connected! \n";
 		return res;
@@ -184,11 +191,11 @@ void DB::connect() {
 		qDebug() << "Mysql connection error (mysql_init)." << mysql_error(conn);
 		throw 3;
 	}
-	query(conn, QBL("SET @@SQL_MODE = 'STRICT_TRANS_TABLES,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';"));
-	query(conn, QBL("SET time_zone='UTC'"));
+	query(QBL("SET @@SQL_MODE = 'STRICT_TRANS_TABLES,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';"));
+	query(QBL("SET time_zone='UTC'"));
 
 	//For some reason mysql is now complaining of not having a DB selected... just select one and gg
-	query(conn, "use " + defaultDB);
+	query("use " + defaultDB);
 }
 
 quint64 getId(const sqlResult& res) {

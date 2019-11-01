@@ -27,7 +27,9 @@ struct DB {
 	uint              port = 3306;
 	mutable st_mysql* conn = nullptr;
 
-	void connect();
+	void      connect();
+	sqlResult query(const QString& sql) const;
+	sqlResult query(const QByteArray& sql) const;
 };
 
 QString QV(const sqlRow& line, const QByteArray& b);
