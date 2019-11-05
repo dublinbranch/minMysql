@@ -1,7 +1,7 @@
 #ifndef MIN_MYSQL_H
 #define MIN_MYSQL_H
 
-#include <QString>
+#include <QStringList>
 
 const QString    SQL_NULL  = "NULL";
 const QByteArray BSQL_NULL = "NULL";
@@ -34,4 +34,20 @@ struct DB {
 
 QString QV(const sqlRow& line, const QByteArray& b);
 quint64 getId(const sqlResult& res);
+
+/**
+ * @brief The SQLBuffering class it is a set of SQL queries with a flashing system which allows to execute
+ * the queries (manually or automatically)
+ */
+class SQLBuffering {
+	DB*         conn = nullptr;
+	QStringList buffer;
+	int         bufferSize = 50;
+
+      public:
+	SQLBuffering(DB* _conn, int _bufferSize = 50);
+	~SQLBuffering();
+	void append(const QString& sql);
+	void flush();
+};
 #endif // MIN_MYSQL_H

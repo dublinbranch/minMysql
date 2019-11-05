@@ -213,3 +213,28 @@ quint64 getId(const sqlResult& res) {
 	qCritical().noquote() << "error fetching last_id" << QStacker();
 	return 0;
 }
+
+SQLBuffering::SQLBuffering(DB* _conn, int _bufferSize) {
+	conn       = _conn;
+	bufferSize = _bufferSize;
+}
+
+SQLBuffering::~SQLBuffering() {
+	flush();
+}
+
+void SQLBuffering::append(const QString& sql) {
+	buffer.append(sql);
+	if (buffer.size() > bufferSize) {
+		flush();
+	}
+}
+
+void SQLBuffering::flush() {
+	if (buffer.isEmpty()) {
+		return;
+	}
+
+	conn->query(buffer.join("\n"));
+	buffer.clear();
+}
