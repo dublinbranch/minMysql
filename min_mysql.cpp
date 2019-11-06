@@ -26,6 +26,13 @@ bool QFileXT2::open(QIODevice::OpenMode flags) {
 	return true;
 }
 
+QString base64this(const char* param) {
+	//no alloc o.O
+	QByteArray cheap;
+	cheap.setRawData(param, strlen(param));
+	return base64this(cheap);
+}
+
 QString base64this(const QByteArray& param) {
 	return "FROM_BASE64('" + param.toBase64() + "')";
 }

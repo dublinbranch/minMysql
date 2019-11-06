@@ -7,6 +7,7 @@ const QString    SQL_NULL  = "NULL";
 const QByteArray BSQL_NULL = "NULL";
 const QByteArray BZero     = "0";
 
+QString base64this(const char* param);
 QString base64this(const QByteArray& param);
 QString base64this(const QString& param);
 QString mayBeBase64(const QString& original);
@@ -40,7 +41,7 @@ quint64 getId(const sqlResult& res);
  * the queries (manually or automatically)
  */
 class SQLBuffering {
-	DB*         conn = nullptr;
+	const DB*   conn = nullptr;
 	QStringList buffer;
 	int         bufferSize = 50;
 
