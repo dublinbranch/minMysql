@@ -224,6 +224,7 @@ quint64 getId(const sqlResult& res) {
 SQLBuffering::SQLBuffering(DB* _conn, int _bufferSize) {
 	conn       = _conn;
 	bufferSize = _bufferSize;
+	buffer.append(QSL("START TRANSACTION;"));
 }
 
 SQLBuffering::~SQLBuffering() {
@@ -241,15 +242,16 @@ void SQLBuffering::flush() {
 	if (buffer.isEmpty()) {
 		return;
 	}
-
+	buffer.append(QSL("COMMIT;"));
 	conn->query(buffer.join("\n"));
 	buffer.clear();
+	buffer.append(QSL("START TRANSACTION;"));
 }
 
 QString Q64(const sqlRow& line, const QByteArray& b) {
 	return base64this(QV(line, b));
 }
 
-QByteArray Q8(const sqlRow &line, const QByteArray &b){
+QByteArray Q8(const sqlRow& line, const QByteArray& b) {
 	return line.value(b);
 }
