@@ -33,8 +33,10 @@ struct DB {
 	sqlResult query(const QByteArray& sql) const;
 };
 
-QString QV(const sqlRow& line, const QByteArray& b);
-quint64 getId(const sqlResult& res);
+QString    QV(const sqlRow& line, const QByteArray& b);
+QByteArray Q8(const sqlRow& line, const QByteArray& b);
+QString    Q64(const sqlRow& line, const QByteArray& b);
+quint64    getId(const sqlResult& res);
 
 /**
  * @brief The SQLBuffering class it is a set of SQL queries with a flashing system which allows to execute

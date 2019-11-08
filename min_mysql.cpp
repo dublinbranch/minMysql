@@ -245,3 +245,11 @@ void SQLBuffering::flush() {
 	conn->query(buffer.join("\n"));
 	buffer.clear();
 }
+
+QString Q64(const sqlRow& line, const QByteArray& b) {
+	return base64this(QV(line, b));
+}
+
+QByteArray Q8(const sqlRow &line, const QByteArray &b){
+	return line.value(b);
+}
