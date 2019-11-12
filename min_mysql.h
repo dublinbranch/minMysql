@@ -2,10 +2,10 @@
 #define MIN_MYSQL_H
 
 #include <QStringList>
-
-const QString    SQL_NULL  = "NULL";
-const QByteArray BSQL_NULL = "NULL";
-const QByteArray BZero     = "0";
+const QString    mysqlDateFormat = "yyyy-MM-dd";
+const QString    SQL_NULL        = "NULL";
+const QByteArray BSQL_NULL       = "NULL";
+const QByteArray BZero           = "0";
 
 QString base64this(const char* param);
 QString base64this(const QByteArray& param);
