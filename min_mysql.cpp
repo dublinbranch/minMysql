@@ -50,15 +50,15 @@ QString mayBeBase64(const QString& original) {
 	}
 }
 
-sqlResult MySQL_query(st_mysql* conn, const QByteArray& sql) {
+sqlResult MySQL_query(st_mysql *conn, const QByteArray& sql) {
 	return query(conn, sql);
 }
 
-sqlResult query(st_mysql* conn, const QString& sql) {
+sqlResult query(st_mysql *conn, const QString& sql) {
 	return query(conn, sql.toUtf8());
 }
 
-sqlResult MySQL_query(st_mysql* conn, const QString& sql) {
+sqlResult MySQL_query(st_mysql *conn, const QString& sql) {
 	return query(conn, sql.toUtf8());
 }
 
@@ -105,7 +105,7 @@ struct SaveSql {
 	uint              erroCode = 99999;
 };
 
-sqlResult query(st_mysql* conn, const QByteArray& sql) {
+sqlResult query(st_mysql *conn, const QByteArray& sql) {
 	QList<sqlRow> res;
 	res.reserve(512);
 
@@ -202,7 +202,7 @@ void DB::connect() {
 	query(QBL("SET time_zone='UTC'"));
 
 	//For some reason mysql is now complaining of not having a DB selected... just select one and gg
-	query("use " + defaultDB);
+	//query("use " + defaultDB);
 }
 
 quint64 getId(const sqlResult& res) {
@@ -221,7 +221,7 @@ quint64 getId(const sqlResult& res) {
 	return 0;
 }
 
-SQLBuffering::SQLBuffering(DB* _conn, int _bufferSize) {
+SQLBuffering::SQLBuffering(const DB *_conn, int _bufferSize) {
 	conn       = _conn;
 	bufferSize = _bufferSize;
 	buffer.append(QSL("START TRANSACTION;"));
@@ -255,3 +255,12 @@ QString Q64(const sqlRow& line, const QByteArray& b) {
 QByteArray Q8(const sqlRow& line, const QByteArray& b) {
 	return line.value(b);
 }
+
+QString base64Nullable(const QString& param) {
+	if (param == SQL_NULL) {
+		return param;
+	}
+	auto a = param.toUtf8().toBase64();
+	return QBL("FROM_BASE64('") + a + QBL("')");
+}
+
