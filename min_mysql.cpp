@@ -111,8 +111,7 @@ sqlResult query(st_mysql *conn, const QByteArray& sql) {
 
 	SaveSql save(sql, &res);
 	if (conn == nullptr) {
-		qCritical() << "This mysql instance is not connected! \n";
-		return res;
+		throw  QSL("This mysql instance is not connected! \n") + QStacker();
 	}
 
 	mysql_query(conn, sql.constData());
