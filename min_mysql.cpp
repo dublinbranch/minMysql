@@ -194,6 +194,12 @@ st_mysql* DB::getConn() {
 }
 
 void DB::connect() {
+	//Mysql connection stuff is not thread safe!
+	static std::mutex           mutex;
+	std::lock_guard<std::mutex> lock(mutex);
+	if(conn != nullptr){
+		return;
+	}
 	conn = mysql_init(nullptr);
 
 	my_bool reconnect = 1;
@@ -207,8 +213,8 @@ void DB::connect() {
 	auto connected = mysql_real_connect(getConn(), host.constData(), user.constData(), pass.constData(),
 	                                    nullptr, port, nullptr, CLIENT_MULTI_STATEMENTS);
 	if (connected == nullptr) {
-		qDebug() << "Mysql connection error (mysql_init)." << mysql_error(getConn());
-		throw 3;
+		auto msg = QSL("Mysql connection error (mysql_init).") + mysql_error(getConn());
+		throw msg;
 	}
 	query(QBL("SET @@SQL_MODE = 'STRICT_TRANS_TABLES,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';"));
 	query(QBL("SET time_zone='UTC'"));
