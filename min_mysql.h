@@ -22,17 +22,21 @@ sqlResult MySQL_query(st_mysql* conn, const QString& sql);
 sqlResult query(st_mysql* conn, const QString& sql);
 sqlResult query(st_mysql *conn, const QByteArray& sql);
 
+
 struct DB {
+public:
 	QByteArray        host = "127.0.0.1";
 	QByteArray        pass;
 	QByteArray        user;
 	QString           defaultDB;
 	uint              port = 3306;
-	mutable st_mysql* conn = nullptr;
-
 	void      connect();
-	sqlResult query(const QString& sql) const;
-	sqlResult query(const QByteArray& sql) const;
+	sqlResult query(const QString& sql);
+	sqlResult query(const QByteArray& sql);
+	st_mysql *getConn() const;
+
+private:
+	inline thread_local static st_mysql* conn = nullptr;
 };
 
 QString    QV(const sqlRow& line, const QByteArray& b);
@@ -45,12 +49,12 @@ quint64    getId(const sqlResult& res);
  * the queries (manually or automatically)
  */
 class SQLBuffering {
-	const DB*   conn = nullptr;
+	DB*   conn = nullptr;
 	QStringList buffer;
 	int         bufferSize = 50;
 
       public:
-	SQLBuffering(const DB* _conn, int _bufferSize = 50);
+	SQLBuffering(DB *_conn, int _bufferSize = 50);
 	~SQLBuffering();
 	void append(const QString& sql);
 	void flush();

@@ -62,11 +62,17 @@ sqlResult MySQL_query(st_mysql *conn, const QString& sql) {
 	return query(conn, sql.toUtf8());
 }
 
-sqlResult DB::query(const QString& sql) const {
+sqlResult DB::query(const QString& sql) {
+	if (conn == nullptr) {
+		connect();
+	}
 	return MySQL_query(this->conn, sql);
 }
 
-sqlResult DB::query(const QByteArray& sql) const {
+sqlResult DB::query(const QByteArray& sql) {
+	if (conn == nullptr) {
+		connect();
+	}
 	return MySQL_query(this->conn, sql);
 }
 
@@ -180,8 +186,13 @@ QString QV(const QMap<QByteArray, QByteArray>& line, const QByteArray& b) {
 	return line.value(b);
 }
 
+st_mysql *DB::getConn() const
+{
+    return conn;
+}
+
 void DB::connect() {
-	conn = mysql_init(nullptr);
+    conn = mysql_init(nullptr);
 
 	my_bool reconnect = 1;
 	mysql_options(conn, MYSQL_OPT_RECONNECT, &reconnect);
@@ -220,7 +231,7 @@ quint64 getId(const sqlResult& res) {
 	return 0;
 }
 
-SQLBuffering::SQLBuffering(const DB *_conn, int _bufferSize) {
+SQLBuffering::SQLBuffering(DB *_conn, int _bufferSize) {
 	conn       = _conn;
 	bufferSize = _bufferSize;
 	buffer.append(QSL("START TRANSACTION;"));
@@ -262,4 +273,3 @@ QString base64Nullable(const QString& param) {
 	auto a = param.toUtf8().toBase64();
 	return QBL("FROM_BASE64('") + a + QBL("')");
 }
-
