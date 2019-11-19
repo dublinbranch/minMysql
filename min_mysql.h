@@ -20,22 +20,21 @@ using sqlResult = QList<sqlRow>;
 sqlResult MySQL_query(st_mysql* conn, const QByteArray& sql);
 sqlResult MySQL_query(st_mysql* conn, const QString& sql);
 sqlResult query(st_mysql* conn, const QString& sql);
-sqlResult query(st_mysql *conn, const QByteArray& sql);
-
+sqlResult query(st_mysql* conn, const QByteArray& sql);
 
 struct DB {
-public:
-	QByteArray        host = "127.0.0.1";
-	QByteArray        pass;
-	QByteArray        user;
-	QString           defaultDB;
-	uint              port = 3306;
-	void      connect();
-	sqlResult query(const QString& sql);
-	sqlResult query(const QByteArray& sql);
-	st_mysql *getConn() const;
+      public:
+	QByteArray host = "127.0.0.1";
+	QByteArray pass;
+	QByteArray user;
+	QString    defaultDB;
+	uint       port = 3306;
+	void       connect();
+	sqlResult  query(const QString& sql);
+	sqlResult  query(const QByteArray& sql);
+	st_mysql*  getConn();
 
-private:
+      private:
 	inline thread_local static st_mysql* conn = nullptr;
 };
 
@@ -49,12 +48,12 @@ quint64    getId(const sqlResult& res);
  * the queries (manually or automatically)
  */
 class SQLBuffering {
-	DB*   conn = nullptr;
+	DB*         conn = nullptr;
 	QStringList buffer;
 	int         bufferSize = 50;
 
       public:
-	SQLBuffering(DB *_conn, int _bufferSize = 50);
+	SQLBuffering(DB* _conn, int _bufferSize = 50);
 	~SQLBuffering();
 	void append(const QString& sql);
 	void flush();

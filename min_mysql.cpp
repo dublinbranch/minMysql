@@ -50,30 +50,30 @@ QString mayBeBase64(const QString& original) {
 	}
 }
 
-sqlResult MySQL_query(st_mysql *conn, const QByteArray& sql) {
+sqlResult MySQL_query(st_mysql* conn, const QByteArray& sql) {
 	return query(conn, sql);
 }
 
-sqlResult query(st_mysql *conn, const QString& sql) {
+sqlResult query(st_mysql* conn, const QString& sql) {
 	return query(conn, sql.toUtf8());
 }
 
-sqlResult MySQL_query(st_mysql *conn, const QString& sql) {
+sqlResult MySQL_query(st_mysql* conn, const QString& sql) {
 	return query(conn, sql.toUtf8());
 }
 
 sqlResult DB::query(const QString& sql) {
-	if (conn == nullptr) {
+	if (getConn() == nullptr) {
 		connect();
 	}
-	return MySQL_query(this->conn, sql);
+	return MySQL_query(this->getConn(), sql);
 }
 
 sqlResult DB::query(const QByteArray& sql) {
-	if (conn == nullptr) {
+	if (getConn() == nullptr) {
 		connect();
 	}
-	return MySQL_query(this->conn, sql);
+	return MySQL_query(this->getConn(), sql);
 }
 
 struct SaveSql {
@@ -111,13 +111,13 @@ struct SaveSql {
 	uint              erroCode = 99999;
 };
 
-sqlResult query(st_mysql *conn, const QByteArray& sql) {
+sqlResult query(st_mysql* conn, const QByteArray& sql) {
 	QList<sqlRow> res;
 	res.reserve(512);
 
 	SaveSql save(sql, &res);
 	if (conn == nullptr) {
-		throw  QSL("This mysql instance is not connected! \n") + QStacker();
+		throw QSL("This mysql instance is not connected! \n") + QStacker();
 	}
 
 	mysql_query(conn, sql.constData());
@@ -186,26 +186,28 @@ QString QV(const QMap<QByteArray, QByteArray>& line, const QByteArray& b) {
 	return line.value(b);
 }
 
-st_mysql *DB::getConn() const
-{
-    return conn;
+st_mysql* DB::getConn() {
+	if (conn == nullptr) {
+		connect();
+	}
+	return conn;
 }
 
 void DB::connect() {
-    conn = mysql_init(nullptr);
+	conn = mysql_init(nullptr);
 
 	my_bool reconnect = 1;
-	mysql_options(conn, MYSQL_OPT_RECONNECT, &reconnect);
+	mysql_options(getConn(), MYSQL_OPT_RECONNECT, &reconnect);
 
-	mysql_options(conn, MYSQL_SET_CHARSET_NAME, "utf8");
+	mysql_options(getConn(), MYSQL_SET_CHARSET_NAME, "utf8");
 	//	if(!conf().db.certificate.isEmpty()){
 	//		mysql_ssl_set(conn,nullptr,nullptr,conf().db.certificate.constData(),nullptr,nullptr);
 
 	//	}
-	auto connected = mysql_real_connect(conn, host.constData(), user.constData(), pass.constData(),
+	auto connected = mysql_real_connect(getConn(), host.constData(), user.constData(), pass.constData(),
 	                                    nullptr, port, nullptr, CLIENT_MULTI_STATEMENTS);
 	if (connected == nullptr) {
-		qDebug() << "Mysql connection error (mysql_init)." << mysql_error(conn);
+		qDebug() << "Mysql connection error (mysql_init)." << mysql_error(getConn());
 		throw 3;
 	}
 	query(QBL("SET @@SQL_MODE = 'STRICT_TRANS_TABLES,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';"));
@@ -231,7 +233,7 @@ quint64 getId(const sqlResult& res) {
 	return 0;
 }
 
-SQLBuffering::SQLBuffering(DB *_conn, int _bufferSize) {
+SQLBuffering::SQLBuffering(DB* _conn, int _bufferSize) {
 	conn       = _conn;
 	bufferSize = _bufferSize;
 	buffer.append(QSL("START TRANSACTION;"));
