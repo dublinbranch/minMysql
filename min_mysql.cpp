@@ -251,6 +251,9 @@ SQLBuffering::~SQLBuffering() {
 
 void SQLBuffering::append(const QString& sql) {
 	buffer.append(sql);
+	if(sql.isEmpty()){
+		return;
+	}
 	if (buffer.size() > bufferSize) {
 		flush();
 	}
