@@ -242,7 +242,6 @@ quint64 getId(const sqlResult& res) {
 SQLBuffering::SQLBuffering(DB* _conn, int _bufferSize) {
 	conn       = _conn;
 	bufferSize = _bufferSize;
-	buffer.append(QSL("START TRANSACTION;"));
 }
 
 SQLBuffering::~SQLBuffering() {
@@ -268,9 +267,9 @@ void SQLBuffering::flush() {
 		throw QSL("you forget to set a usable DB Conn!") + QStacker();
 	}
 	buffer.append(QSL("COMMIT;"));
+	buffer.prepend(QSL("START TRANSACTION;"));
 	conn->query(buffer.join("\n"));
 	buffer.clear();
-	buffer.append(QSL("START TRANSACTION;"));
 }
 
 QString Q64(const sqlRow& line, const QByteArray& b) {
