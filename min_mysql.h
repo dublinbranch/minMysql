@@ -35,6 +35,7 @@ struct DB {
 	sqlResult  query(const QString& sql);
 	sqlResult  query(const QByteArray& sql);
 	st_mysql*  getConn();
+	ulong      lastId();
 
       private:
 	inline thread_local static st_mysql* conn = nullptr;

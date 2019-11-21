@@ -193,11 +193,15 @@ st_mysql* DB::getConn() {
 	return conn;
 }
 
+ulong DB::lastId() {
+	return mysql_insert_id(getConn());
+}
+
 void DB::connect() {
 	//Mysql connection stuff is not thread safe!
 	static std::mutex           mutex;
 	std::lock_guard<std::mutex> lock(mutex);
-	if(conn != nullptr){
+	if (conn != nullptr) {
 		return;
 	}
 	conn = mysql_init(nullptr);
@@ -250,7 +254,7 @@ SQLBuffering::~SQLBuffering() {
 
 void SQLBuffering::append(const QString& sql) {
 	buffer.append(sql);
-	if(sql.isEmpty()){
+	if (sql.isEmpty()) {
 		return;
 	}
 	//0 disable flushing, 1 disable buffering
@@ -263,7 +267,7 @@ void SQLBuffering::flush() {
 	if (buffer.isEmpty()) {
 		return;
 	}
-	if(conn == nullptr){
+	if (conn == nullptr) {
 		throw QSL("you forget to set a usable DB Conn!") + QStacker();
 	}
 	buffer.append(QSL("COMMIT;"));
