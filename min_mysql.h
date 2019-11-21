@@ -50,10 +50,16 @@ quint64    getId(const sqlResult& res);
 class SQLBuffering {
 	DB*         conn = nullptr;
 	QStringList buffer;
-	int         bufferSize = 50;
+	int         bufferSize = 1000;
 
       public:
-	SQLBuffering(DB* _conn, int _bufferSize = 50);
+	/**
+	 * @brief SQLBuffering
+	 * @param _conn
+	 * @param _bufferSize 0 disable flushing, 1 disable buffering
+	 */
+	SQLBuffering(DB* _conn, int _bufferSize = 1000);
+	SQLBuffering() = default;
 	~SQLBuffering();
 	void append(const QString& sql);
 	void flush();

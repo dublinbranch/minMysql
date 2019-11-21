@@ -254,7 +254,8 @@ void SQLBuffering::append(const QString& sql) {
 	if(sql.isEmpty()){
 		return;
 	}
-	if (buffer.size() > bufferSize) {
+	//0 disable flushing, 1 disable buffering
+	if (bufferSize && buffer.size() > bufferSize) {
 		flush();
 	}
 }
@@ -262,6 +263,9 @@ void SQLBuffering::append(const QString& sql) {
 void SQLBuffering::flush() {
 	if (buffer.isEmpty()) {
 		return;
+	}
+	if(conn == nullptr){
+		throw QSL("you forget to set a usable DB Conn!") + QStacker();
 	}
 	buffer.append(QSL("COMMIT;"));
 	conn->query(buffer.join("\n"));
