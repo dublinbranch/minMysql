@@ -2,11 +2,13 @@
 #define MIN_MYSQL_H
 
 #include <QStringList>
-const QString    mysqlDateFormat = "yyyy-MM-dd";
-const QString    SQL_NULL        = "NULL";
-const QByteArray BSQL_NULL       = "NULL";
-const QByteArray BZero           = "0";
-const QString    Zero            = "0";
+//Those variable are shared in many places, order of initialization is important!
+//Inline will avoid to have multiple copy, and enforces having a single one
+inline const QString    mysqlDateFormat = "yyyy-MM-dd";
+inline const QString    SQL_NULL        = "NULL";
+inline const QByteArray BSQL_NULL       = "NULL";
+inline const QByteArray BZero           = "0";
+inline const QString    Zero            = "0";
 
 QString base64this(const char* param);
 QString base64this(const QByteArray& param);
