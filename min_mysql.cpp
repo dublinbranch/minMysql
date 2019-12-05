@@ -126,6 +126,8 @@ sqlResult query(st_mysql* conn, const QByteArray& sql) {
 
 	if (error != 0) {
 		auto err = QSL("Mysql error for ") + sql.constData() + QSL("error was ") + mysql_error(conn) + QSL(" code: ") + error;
+		//this line is needed for proper email error reporting
+		qCritical() << err;
 		throw err;
 	}
 
