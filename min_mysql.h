@@ -38,7 +38,7 @@ struct DB {
 	ulong      lastId();
 
       private:
-	inline thread_local static st_mysql* conn = nullptr;
+	st_mysql* conn = nullptr;
 };
 
 QString    QV(const sqlRow& line, const QByteArray& b);
