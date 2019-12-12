@@ -189,44 +189,48 @@ QString QV(const QMap<QByteArray, QByteArray>& line, const QByteArray& b) {
 }
 
 st_mysql* DB::getConn() {
-	if (conn == nullptr) {
-		connect();
+	st_mysql* curConn = connPool;
+	if (curConn == nullptr) {
+		//loading in connPool is inside
+		curConn = connect();
 	}
-	return conn;
+	return curConn;
 }
 
 ulong DB::lastId() {
 	return mysql_insert_id(getConn());
 }
 
-void DB::connect() {
+st_mysql* DB::connect() {
 	//Mysql connection stuff is not thread safe!
 	static std::mutex           mutex;
 	std::lock_guard<std::mutex> lock(mutex);
-	if (conn != nullptr) {
-		return;
-	}
-	conn = mysql_init(nullptr);
+	st_mysql* conn = mysql_init(nullptr);
 
 	my_bool reconnect = 1;
-	mysql_options(getConn(), MYSQL_OPT_RECONNECT, &reconnect);
+	mysql_options(conn, MYSQL_OPT_RECONNECT, &reconnect);
 
-	mysql_options(getConn(), MYSQL_SET_CHARSET_NAME, "utf8");
+	mysql_options(conn, MYSQL_SET_CHARSET_NAME, "utf8");
 	//	if(!conf().db.certificate.isEmpty()){
 	//		mysql_ssl_set(conn,nullptr,nullptr,conf().db.certificate.constData(),nullptr,nullptr);
 
 	//	}
-	auto connected = mysql_real_connect(getConn(), host.constData(), user.constData(), pass.constData(),
+	auto connected = mysql_real_connect(conn, host.constData(), user.constData(), pass.constData(),
 	                                    nullptr, port, nullptr, CLIENT_MULTI_STATEMENTS);
 	if (connected == nullptr) {
-		auto msg = QSL("Mysql connection error (mysql_init).") + mysql_error(getConn());
+		auto msg = QSL("Mysql connection error (mysql_init).") + mysql_error(conn);
 		throw msg;
 	}
+	
+	/***/
+	connPool = conn;
+	/***/
 	query(QBL("SET @@SQL_MODE = 'STRICT_TRANS_TABLES,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';"));
 	query(QBL("SET time_zone='UTC'"));
 
 	//For some reason mysql is now complaining of not having a DB selected... just select one and gg
 	query("use " + defaultDB);
+	return conn;
 }
 
 quint64 getId(const sqlResult& res) {

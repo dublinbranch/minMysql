@@ -1,7 +1,9 @@
 #ifndef MIN_MYSQL_H
 #define MIN_MYSQL_H
 
+#include "MITLS.h"
 #include <QStringList>
+
 //Those variable are shared in many places, order of initialization is important!
 //Inline will avoid to have multiple copy, and enforces having a single one
 inline const QString    mysqlDateFormat = "yyyy-MM-dd";
@@ -31,14 +33,15 @@ struct DB {
 	QByteArray user;
 	QString    defaultDB;
 	uint       port = 3306;
-	void       connect();
+	st_mysql*  connect();
 	sqlResult  query(const QString& sql);
 	sqlResult  query(const QByteArray& sql);
 	st_mysql*  getConn();
 	ulong      lastId();
 
       private:
-	st_mysql* conn = nullptr;
+	//Each thread and each instance will need it's own copy
+	mi_tls<st_mysql*> connPool;
 };
 
 QString    QV(const sqlRow& line, const QByteArray& b);
