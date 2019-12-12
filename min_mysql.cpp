@@ -205,7 +205,7 @@ st_mysql* DB::connect() {
 	//Mysql connection stuff is not thread safe!
 	static std::mutex           mutex;
 	std::lock_guard<std::mutex> lock(mutex);
-	st_mysql* conn = mysql_init(nullptr);
+	st_mysql*                   conn = mysql_init(nullptr);
 
 	my_bool reconnect = 1;
 	mysql_options(conn, MYSQL_OPT_RECONNECT, &reconnect);
@@ -221,7 +221,7 @@ st_mysql* DB::connect() {
 		auto msg = QSL("Mysql connection error (mysql_init).") + mysql_error(conn);
 		throw msg;
 	}
-	
+
 	/***/
 	connPool = conn;
 	/***/

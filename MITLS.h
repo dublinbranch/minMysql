@@ -53,6 +53,9 @@ class mi_tls_repository {
 
 	mi_tls_repository() {
 		copyCounter++;
+		if (!repository) {
+			repository = new std::unordered_map<uintptr_t, T>();
+		}
 	}
 
 	~mi_tls_repository() {
@@ -66,5 +69,5 @@ class mi_tls_repository {
       private:
 	//To avoid problem of this beeing deallocated prematurely, just use a ptr, that will be inited just once
 	inline static int                                            copyCounter = 0;
-	inline static thread_local std::unordered_map<uintptr_t, T>* repository  = new std::unordered_map<uintptr_t, T>();
+	inline static thread_local std::unordered_map<uintptr_t, T>* repository  = nullptr;
 };

@@ -39,6 +39,11 @@ struct DB {
 	st_mysql*  getConn();
 	ulong      lastId();
 
+	//Non copyable
+	DB()        = default;
+	DB& operator=(const DB&) = delete;
+	DB(const DB&)            = delete;
+
       private:
 	//Each thread and each instance will need it's own copy
 	mi_tls<st_mysql*> connPool;
