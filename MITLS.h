@@ -34,10 +34,16 @@ template <typename T>
 class mi_tls_repository {
       protected:
 	void store(uintptr_t instance, T value) {
+		if (!repository) {
+			repository = new std::unordered_map<uintptr_t, T>();
+		}
 		repository->operator[](instance) = value;
 	}
 
 	T load(uintptr_t instance) {
+		if (!repository) {
+			repository = new std::unordered_map<uintptr_t, T>();
+		}
 		return repository->operator[](instance);
 	}
 
