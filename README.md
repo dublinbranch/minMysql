@@ -1,0 +1,1 @@
+zypper in libmariadb-devel
