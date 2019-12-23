@@ -36,6 +36,7 @@ struct DB {
 	st_mysql*  connect();
 	sqlResult  query(const QString& sql);
 	sqlResult  query(const QByteArray& sql);
+	sqlResult  query(const char* sql);
 	st_mysql*  getConn();
 	ulong      lastId();
 

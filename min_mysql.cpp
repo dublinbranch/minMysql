@@ -12,20 +12,6 @@
 
 QByteArray QStacker(uint skip = 0);
 
-class QFileXT2 : public QFile {
-      public:
-	bool open(OpenMode flags) override;
-};
-
-bool QFileXT2::open(QIODevice::OpenMode flags) {
-	if (!QFile::open(flags)) {
-		qCritical().noquote() << errorString() << "opening" << fileName() << "\n"
-		                      << QStacker();
-		return false;
-	}
-	return true;
-}
-
 QString base64this(const char* param) {
 	//no alloc o.O
 	QByteArray cheap;
@@ -86,10 +72,11 @@ struct SaveSql {
 
 		//we keep open a file and just append from now on...
 		//for the moment is just a single file later... who knows
-		static QFileXT2 file;
+		static QFile file;
 		if (!file.isOpen()) {
 			file.setFileName("sql.log");
 			if (!file.open(QIODevice::WriteOnly | QIODevice::Append)) {
+				qCritical() << "impossible to open sql.log";
 				return;
 			}
 		}
@@ -296,4 +283,8 @@ QString base64Nullable(const QString& param) {
 	}
 	auto a = param.toUtf8().toBase64();
 	return QBL("FROM_BASE64('") + a + QBL("')");
+}
+
+sqlResult DB::query(const char *sql) {
+    return query(QByteArray(sql));
 }
