@@ -3,6 +3,7 @@
 
 #include "MITLS.h"
 #include <QStringList>
+#include <QMap>
 
 //Those variable are shared in many places, order of initialization is important!
 //Inline will avoid to have multiple copy, and enforces having a single one
