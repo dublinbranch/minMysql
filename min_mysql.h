@@ -33,7 +33,7 @@ struct DB {
 	QByteArray host = "127.0.0.1";
 	QByteArray pass;
 	QByteArray user;
-	QString    defaultDB;
+
 	uint       port = 3306;
 	st_mysql*  connect();
 	sqlResult  query(const QString& sql);
@@ -47,9 +47,13 @@ struct DB {
 	DB& operator=(const DB&) = delete;
 	DB(const DB&)            = delete;
 
-      private:
-	//Each thread and each instance will need it's own copy
-	mi_tls<st_mysql*> connPool;
+    QString getDefaultDB() const;
+    void setDefaultDB(const QString &value);
+
+private:
+    //Each thread and each instance will need it's own copy
+    mi_tls<st_mysql*> connPool;
+        QString    defaultDB;
 };
 
 QString    QV(const sqlRow& line, const QByteArray& b);
