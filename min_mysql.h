@@ -2,8 +2,8 @@
 #define MIN_MYSQL_H
 
 #include "MITLS.h"
-#include <QStringList>
 #include <QMap>
+#include <QStringList>
 
 //Those variable are shared in many places, order of initialization is important!
 //Inline will avoid to have multiple copy, and enforces having a single one
@@ -34,26 +34,27 @@ struct DB {
 	QByteArray pass;
 	QByteArray user;
 
-	uint       port = 3306;
-	st_mysql*  connect();
-	sqlResult  query(const QString& sql);
-	sqlResult  query(const QByteArray& sql);
-	sqlResult  query(const char* sql);
-	st_mysql*  getConn();
-	ulong      lastId();
+	uint      port = 3306;
+	st_mysql* connect();
+	sqlResult query(const QString& sql);
+	sqlResult query(const QByteArray& sql);
+	sqlResult query(const char* sql);
+	st_mysql* getConn();
+	ulong     lastId();
+	long affectedRows();
 
 	//Non copyable
 	DB()        = default;
 	DB& operator=(const DB&) = delete;
 	DB(const DB&)            = delete;
 
-    QString getDefaultDB() const;
-    void setDefaultDB(const QString &value);
+	QString getDefaultDB() const;
+	void    setDefaultDB(const QString& value);
 
-private:
-    //Each thread and each instance will need it's own copy
-    mi_tls<st_mysql*> connPool;
-        QString    defaultDB;
+      private:
+	//Each thread and each instance will need it's own copy
+	mi_tls<st_mysql*> connPool;
+	QString           defaultDB;
 };
 
 QString    QV(const sqlRow& line, const QByteArray& b);

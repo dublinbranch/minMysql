@@ -188,23 +188,31 @@ ulong DB::lastId() {
 	return mysql_insert_id(getConn());
 }
 
+/**
+ * @brief DB::affectedRows looks broken, it return 1 even if there is nothing inserted o.O
+ * @return
+ */
+long DB::affectedRows() {
+	return mysql_affected_rows(getConn());
+}
+
 QString DB::getDefaultDB() const {
-    if (defaultDB.isEmpty()) {
-        auto msg = QSL("default DB is sadly required to havoid mysql complain on certain operation!");
-        qCritical() << msg;
-        throw msg;
-    }
-    return defaultDB;
+	if (defaultDB.isEmpty()) {
+		auto msg = QSL("default DB is sadly required to havoid mysql complain on certain operation!");
+		qCritical() << msg;
+		throw msg;
+	}
+	return defaultDB;
 }
 
 void DB::setDefaultDB(const QString& value) {
-    defaultDB = value;
+	defaultDB = value;
 }
 
 st_mysql* DB::connect() {
-    //Mysql connection stuff is not thread safe!
-    static std::mutex           mutex;
-    std::lock_guard<std::mutex> lock(mutex);
+	//Mysql connection stuff is not thread safe!
+	static std::mutex           mutex;
+	std::lock_guard<std::mutex> lock(mutex);
 	st_mysql*                   conn = mysql_init(nullptr);
 
 	my_bool reconnect = 1;
@@ -299,5 +307,5 @@ QString base64Nullable(const QString& param) {
 }
 
 sqlResult DB::query(const char* sql) {
-    return query(QByteArray(sql));
+	return query(QByteArray(sql));
 }
