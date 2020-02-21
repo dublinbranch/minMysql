@@ -237,7 +237,7 @@ st_mysql* DB::connect() {
 	query(QBL("SET time_zone='UTC'"));
 
 	//For some reason mysql is now complaining of not having a DB selected... just select one and gg
-	query("use " + defaultDB);
+	query("use " + getDefaultDB());
 	return conn;
 }
 
