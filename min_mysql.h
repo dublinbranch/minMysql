@@ -35,13 +35,13 @@ struct DB {
 	QByteArray user;
 
 	uint      port = 3306;
-	st_mysql* connect();
-	sqlResult query(const QString& sql);
-	sqlResult query(const QByteArray& sql);
-	sqlResult query(const char* sql);
-	st_mysql* getConn();
+	st_mysql* connect() const;
+	sqlResult query(const QString& sql) const;
+	sqlResult query(const QByteArray& sql) const;
+	sqlResult query(const char* sql) const;
+	st_mysql* getConn() const;
 	ulong     lastId();
-	long affectedRows();
+	long      affectedRows();
 
 	//Non copyable
 	DB()        = default;
@@ -53,8 +53,8 @@ struct DB {
 
       private:
 	//Each thread and each instance will need it's own copy
-	mi_tls<st_mysql*> connPool;
-	QString           defaultDB;
+	mutable mi_tls<st_mysql*> connPool;
+	QString                   defaultDB;
 };
 
 QString    QV(const sqlRow& line, const QByteArray& b);

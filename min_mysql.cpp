@@ -48,14 +48,14 @@ sqlResult MySQL_query(st_mysql* conn, const QString& sql) {
 	return query(conn, sql.toUtf8());
 }
 
-sqlResult DB::query(const QString& sql) {
+sqlResult DB::query(const QString& sql) const {
 	if (getConn() == nullptr) {
 		connect();
 	}
 	return MySQL_query(this->getConn(), sql);
 }
 
-sqlResult DB::query(const QByteArray& sql) {
+sqlResult DB::query(const QByteArray& sql) const {
 	if (getConn() == nullptr) {
 		connect();
 	}
@@ -175,7 +175,7 @@ QString QV(const QMap<QByteArray, QByteArray>& line, const QByteArray& b) {
 	return line.value(b);
 }
 
-st_mysql* DB::getConn() {
+st_mysql* DB::getConn() const {
 	st_mysql* curConn = connPool;
 	if (curConn == nullptr) {
 		//loading in connPool is inside
@@ -209,7 +209,7 @@ void DB::setDefaultDB(const QString& value) {
 	defaultDB = value;
 }
 
-st_mysql* DB::connect() {
+st_mysql* DB::connect() const {
 	//Mysql connection stuff is not thread safe!
 	static std::mutex           mutex;
 	std::lock_guard<std::mutex> lock(mutex);
@@ -306,6 +306,6 @@ QString base64Nullable(const QString& param) {
 	return QBL("FROM_BASE64('") + a + QBL("')");
 }
 
-sqlResult DB::query(const char* sql) {
+sqlResult DB::query(const char* sql) const {
 	return query(QByteArray(sql));
 }
