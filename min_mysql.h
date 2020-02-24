@@ -2,7 +2,6 @@
 #define MIN_MYSQL_H
 
 #include "MITLS.h"
-#include <QMap>
 #include <QStringList>
 
 //Those variable are shared in many places, order of initialization is important!
