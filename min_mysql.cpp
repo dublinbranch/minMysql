@@ -6,9 +6,12 @@
 #include <QFile>
 #include <QMap>
 #include <mutex>
+#include <poll.h>
 
 #define QBL(str) QByteArrayLiteral(str)
 #define QSL(str) QStringLiteral(str)
+
+static int somethingHappened(MYSQL* mysql, int status);
 
 QByteArray QStacker(uint skip = 0);
 
@@ -20,7 +23,7 @@ QString base64this(const char* param) {
 }
 
 QString base64this(const QByteArray& param) {
-	return "FROM_BASE64('" + param.toBase64() + "')";
+	return QBL("FROM_BASE64('") + param.toBase64() + QBL("')");
 }
 
 QString base64this(const QString& param) {
@@ -36,139 +39,30 @@ QString mayBeBase64(const QString& original) {
 	}
 }
 
-sqlResult MySQL_query(st_mysql* conn, const QByteArray& sql) {
-	return query(conn, sql);
-}
-
-sqlResult query(st_mysql* conn, const QString& sql) {
-	return query(conn, sql.toUtf8());
-}
-
-sqlResult MySQL_query(st_mysql* conn, const QString& sql) {
-	return query(conn, sql.toUtf8());
-}
-
 sqlResult DB::query(const QString& sql) const {
-	if (getConn() == nullptr) {
-		connect();
-	}
-	return MySQL_query(this->getConn(), sql);
+	return query(sql.toUtf8());
 }
 
 sqlResult DB::query(const QByteArray& sql) const {
-	if (getConn() == nullptr) {
-		connect();
-	}
-	return MySQL_query(this->getConn(), sql);
-}
-
-struct SaveSql {
-	SaveSql(const QByteArray& _sql, const sqlResult* _res)
-	    : sql(_sql), res(_res) {
-	}
-	~SaveSql() {
-		static std::mutex            lock;
-		std::scoped_lock<std::mutex> scoped(lock);
-
-		//we keep open a file and just append from now on...
-		//for the moment is just a single file later... who knows
-		static QFile file;
-		if (!file.isOpen()) {
-			file.setFileName("sql.log");
-			if (!file.open(QIODevice::WriteOnly | QIODevice::Append)) {
-				qCritical() << "impossible to open sql.log";
-				return;
-			}
-		}
-
-		QDateTime myDateTime = QDateTime::currentDateTime();
-		QString   time       = myDateTime.toString(Qt::ISODateWithMs);
-
-		file.write(time.toUtf8() + QBL("\nErroCode: ") + QByteArray::number(erroCode) + QBL("\t\t") + sql);
-		if (res && !res->isEmpty()) {
-			file.write("\n");
-			QDebug dbg(&file);
-			dbg << (*res);
-		}
-		file.write("\n--------\n");
-		file.flush();
-	}
-	const QByteArray& sql;
-	const sqlResult*  res      = nullptr;
-	uint              erroCode = 99999;
-};
-
-sqlResult query(st_mysql* conn, const QByteArray& sql) {
-	QList<sqlRow> res;
-	res.reserve(512);
-
-	SaveSql save(sql, &res);
+	auto conn = getConn();
 	if (conn == nullptr) {
 		throw QSL("This mysql instance is not connected! \n") + QStacker();
 	}
 
-	mysql_query(conn, sql.constData());
-	auto error    = mysql_errno(conn);
-	save.erroCode = error;
+	lastSQL = sql;
+	SQLLogger sqlLogger(sql, saveQuery);
 
+	mysql_query(conn, sql.constData());
+	auto error = mysql_errno(conn);
 	if (error != 0) {
-		auto err = QSL("Mysql error for ") + sql.constData() + QSL("error was ") + mysql_error(conn) + QSL(" code: ") + error;
+		auto err        = QSL("Mysql error for ") + sql.constData() + QSL("error was ") + mysql_error(conn) + QSL(" code: ") + error;
+		sqlLogger.error = err;
 		//this line is needed for proper email error reporting
 		qCritical() << err;
 		throw err;
 	}
 
-	//If you batch more than two select, you are crazy, just the first one will be returned and you will be in bad situation later
-	//this iteration is just if you batch mulitple update, result is NULL, but mysql insist that you fetch them...
-	do {
-		//swap the whole result set we do not expect 1Gb+ result set here
-		MYSQL_RES* result = mysql_store_result(conn);
-
-		if (result != nullptr) {
-			my_ulonglong row_count = mysql_num_rows(result);
-			for (uint j = 0; j < row_count; j++) {
-				MYSQL_ROW    row        = mysql_fetch_row(result);
-				auto         num_fields = mysql_num_fields(result);
-				MYSQL_FIELD* fields     = mysql_fetch_fields(result);
-				sqlRow       thisItem;
-				auto         lengths = mysql_fetch_lengths(result);
-				for (uint16_t i = 0; i < num_fields; i++) {
-					//this is how sql NULL is signaled, instead of having a wrapper and check ALWAYS before access, we normally just ceck on result swap if a NULL has any sense here or not.
-					//Plus if you have the string NULL in a DB you are really looking for trouble
-					if (row[i] == nullptr && lengths[i] == 0) {
-						thisItem.insert(fields[i].name, BSQL_NULL);
-					} else {
-						thisItem.insert(fields[i].name, QByteArray(row[i], static_cast<int>(lengths[i])));
-					}
-				}
-				res.push_back(thisItem);
-			}
-			mysql_free_result(result);
-			return res;
-		}
-	} while (mysql_next_result(conn) == 0);
-
-	//auto affected  = mysql_affected_rows(conn);
-	auto warnCount = mysql_warning_count(conn);
-	if (warnCount && !sql.toLower().contains(QBL("drop table if exists"))) {
-		qDebug().noquote() << "warning for " << sql << query(conn, QBL("SHOW WARNINGS"));
-	}
-
-	error = mysql_errno(conn);
-	if (error != 0) {
-		qCritical().noquote() << "Mysql error for " << sql.constData() << "error was " << mysql_error(conn) << " code: " << error; // << QStacker(3);
-		throw 1025;
-	}
-
-	auto v = mysql_insert_id(conn);
-	if (v > 0) {
-		sqlRow thisItem;
-		thisItem.insert(QBL("last_id"), QByteArray::number(v));
-		res.push_back(thisItem);
-		return res;
-	}
-
-	return res;
+	return fetchResult(&sqlLogger);
 }
 
 QString QV(const QMap<QByteArray, QByteArray>& line, const QByteArray& b) {
@@ -184,7 +78,7 @@ st_mysql* DB::getConn() const {
 	return curConn;
 }
 
-ulong DB::lastId() {
+ulong DB::lastId() const {
 	return mysql_insert_id(getConn());
 }
 
@@ -192,7 +86,7 @@ ulong DB::lastId() {
  * @brief DB::affectedRows looks broken, it return 1 even if there is nothing inserted o.O
  * @return
  */
-long DB::affectedRows() {
+long DB::affectedRows() const {
 	return mysql_affected_rows(getConn());
 }
 
@@ -217,6 +111,8 @@ st_mysql* DB::connect() const {
 
 	my_bool reconnect = 1;
 	mysql_options(conn, MYSQL_OPT_RECONNECT, &reconnect);
+	//This will enable non blocking capability
+	mysql_options(conn, MYSQL_OPT_NONBLOCK, 0);
 
 	mysql_options(conn, MYSQL_SET_CHARSET_NAME, "utf8");
 	//	if(!conf().db.certificate.isEmpty()){
@@ -308,4 +204,179 @@ QString base64Nullable(const QString& param) {
 
 sqlResult DB::query(const char* sql) const {
 	return query(QByteArray(sql));
+}
+
+void DB::startQuery(const QByteArray& sql) const {
+	int  err;
+	auto conn  = getConn();
+	signalMask = mysql_real_query_start(&err, conn, sql.constData(), sql.length());
+	if (!signalMask) {
+		throw QSL("Error executing ASYNC query (start):") + mysql_error(conn);
+	}
+}
+
+void DB::startQuery(const QString& sql) const {
+	return startQuery(sql.toUtf8());
+}
+
+void DB::startQuery(const char* sql) const {
+	return startQuery(QByteArray(sql));
+}
+
+bool DB::completedQuery() const {
+	int  err;
+	auto conn  = getConn();
+	auto event = somethingHappened(conn, signalMask);
+	if (event) {
+		event = mysql_real_query_cont(&err, conn, event);
+		if (err) {
+			throw QSL("Error executing ASYNC query (cont):") + mysql_error(conn);
+		}
+		//if we are still listening to an event, return false
+		//else if we have no more event to wait return true
+		return !event;
+	} else {
+		return false;
+	}
+}
+
+sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
+	//most inefficent way, but most easy to use!
+	sqlResult res;
+	res.reserve(512);
+
+	//this is 99.9999% useless and will never again be used
+	auto cry = std::shared_ptr<SQLLogger>();
+	if (!sqlLogger) {
+		cry       = std::make_shared<SQLLogger>(lastSQL, saveQuery);
+		sqlLogger = cry.get();
+	}
+	sqlLogger->res = &res;
+
+	auto conn = getConn();
+	//If you batch more than two select, you are crazy, just the first one will be returned and you will be in bad situation later
+	//this iteration is just if you batch mulitple update, result is NULL, but mysql insist that you fetch them...
+	do {
+		//swap the whole result set we do not expect 1Gb+ result set here
+		MYSQL_RES* result = mysql_store_result(conn);
+
+		if (result != nullptr) {
+			my_ulonglong row_count = mysql_num_rows(result);
+			for (uint j = 0; j < row_count; j++) {
+				MYSQL_ROW    row        = mysql_fetch_row(result);
+				auto         num_fields = mysql_num_fields(result);
+				MYSQL_FIELD* fields     = mysql_fetch_fields(result);
+				sqlRow       thisItem;
+				auto         lengths = mysql_fetch_lengths(result);
+				for (uint16_t i = 0; i < num_fields; i++) {
+					//this is how sql NULL is signaled, instead of having a wrapper and check ALWAYS before access, we normally just ceck on result swap if a NULL has any sense here or not.
+					//Plus if you have the string NULL in a DB you are really looking for trouble
+					if (row[i] == nullptr && lengths[i] == 0) {
+						thisItem.insert(fields[i].name, BSQL_NULL);
+					} else {
+						thisItem.insert(fields[i].name, QByteArray(row[i], static_cast<int>(lengths[i])));
+					}
+				}
+				res.push_back(thisItem);
+			}
+			mysql_free_result(result);
+			return res;
+		}
+	} while (mysql_next_result(conn) == 0);
+
+	//auto affected  = mysql_affected_rows(conn);
+	auto warnCount = mysql_warning_count(conn);
+	if (warnCount) {
+		qDebug().noquote() << "warning for " << lastSQL << query(QBL("SHOW WARNINGS"));
+	}
+
+	auto error       = mysql_errno(conn);
+	sqlLogger->error = mysql_error(conn);
+	if (error != 0) {
+		qCritical().noquote() << "Mysql error for " << lastSQL.constData() << "error was " << mysql_error(conn) << " code: " << error; // << QStacker(3);
+		throw 1025;
+	}
+
+	auto v = mysql_insert_id(conn);
+	if (v > 0) {
+		sqlRow thisItem;
+		thisItem.insert(QBL("last_id"), QByteArray::number(v));
+		res.push_back(thisItem);
+		return res;
+	}
+
+	return res;
+}
+
+/**
+  why static ? -> https://stackoverflow.com/a/15235626/1040618
+  in short is not exported
+ * @brief wait_for_mysql
+ * @param mysql
+ * @param status
+ * @return
+ */
+static int somethingHappened(MYSQL* mysql, int status) {
+	struct pollfd pfd;
+	int           res;
+
+	pfd.fd = mysql_get_socket(mysql);
+	pfd.events =
+		(status & MYSQL_WAIT_READ ? POLLIN : 0) |
+		(status & MYSQL_WAIT_WRITE ? POLLOUT : 0) |
+		(status & MYSQL_WAIT_EXCEPT ? POLLPRI : 0);
+
+	//We have no reason to wait, either is ready or not
+	res = poll(&pfd, 1, 0);
+	if (res == 0)
+		return 0;
+	else if (res < 0) {
+		return 0;
+	} else {
+		int status = 0;
+		if (pfd.revents & POLLIN)
+			status |= MYSQL_WAIT_READ;
+		if (pfd.revents & POLLOUT)
+			status |= MYSQL_WAIT_WRITE;
+		if (pfd.revents & POLLPRI)
+			status |= MYSQL_WAIT_EXCEPT;
+		return status;
+	}
+}
+
+void SQLLogger::flush() {
+	if (flushed) {
+		return;
+	}
+	flushed = true;
+	static std::mutex            lock;
+	std::scoped_lock<std::mutex> scoped(lock);
+
+	//we keep open a file and just append from now on...
+	//for the moment is just a single file later... who knows
+	static QFile file;
+	if (!file.isOpen()) {
+		file.setFileName("sql.log");
+		if (!file.open(QIODevice::WriteOnly | QIODevice::Append)) {
+			qCritical() << "impossible to open sql.log";
+			return;
+		}
+	}
+
+	QDateTime myDateTime = QDateTime::currentDateTime();
+	QString   time       = myDateTime.toString(Qt::ISODateWithMs);
+
+	file.write(time.toUtf8() + QBL("\nError: ") + error.toUtf8() + QBL("\n") + sql);
+	if (res && !res->isEmpty()) {
+		file.write("\n");
+		//nice trick to use qDebug operator << on a custom stream!
+		QDebug dbg(&file);
+		dbg << (*res);
+	}
+	file.write("\n--------\n");
+	file.flush();
+}
+
+SQLLogger::~SQLLogger() {
+	flush();
 }

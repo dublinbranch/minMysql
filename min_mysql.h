@@ -22,11 +22,29 @@ QString base64Nullable(const QString& param);
 struct st_mysql;
 using sqlRow    = QMap<QByteArray, QByteArray>;
 using sqlResult = QList<sqlRow>;
-sqlResult MySQL_query(st_mysql* conn, const QByteArray& sql);
-sqlResult MySQL_query(st_mysql* conn, const QString& sql);
-sqlResult query(st_mysql* conn, const QString& sql);
-sqlResult query(st_mysql* conn, const QByteArray& sql);
 
+struct SQLLogger {
+	SQLLogger(const QByteArray& _sql, bool _enabled)
+		: sql(_sql), enabled(_enabled) {
+	}
+	void flush();
+	~SQLLogger();
+	bool              flushed = false;
+	const QByteArray& sql;
+	const sqlResult*  res = nullptr;
+	QString           error;
+	bool              enabled = false;
+};
+
+/**
+ * @brief The DB struct
+ * TODO:
+ * detach CONST config from actual class (mutable and const are code smell -.-)
+ * just disable copy operator to avoid improper usage, if you pass a DB obj to another thread
+ * you are CRAZY! no need to overcomplicate life with mi_tls ?
+ * This can also help avoid the insanity of SQLLogger
+ * CONST conf -> dynamic connection -> NON Reusable class ?
+ */
 struct DB {
       public:
 	QByteArray host = "127.0.0.1";
@@ -38,9 +56,21 @@ struct DB {
 	sqlResult query(const QString& sql) const;
 	sqlResult query(const QByteArray& sql) const;
 	sqlResult query(const char* sql) const;
+	/**
+	  Those 2 are used toghether for the ASYNC mode
+	 * @brief startQuery
+	 * @param sql
+	 */
+	void startQuery(const QByteArray& sql) const;
+	void startQuery(const QString& sql) const;
+	void startQuery(const char * sql) const;
+	bool completedQuery() const;
+
+	//Shared by both async and not
+	sqlResult fetchResult(SQLLogger* sqlLogger = nullptr) const;
 	st_mysql* getConn() const;
-	ulong     lastId();
-	long      affectedRows();
+	ulong     lastId() const;
+	long      affectedRows() const;
 
 	//Non copyable
 	DB()        = default;
@@ -49,11 +79,15 @@ struct DB {
 
 	QString getDefaultDB() const;
 	void    setDefaultDB(const QString& value);
+	bool    saveQuery = false;
 
       private:
 	//Each thread and each instance will need it's own copy
 	mutable mi_tls<st_mysql*> connPool;
 	QString                   defaultDB;
+	//user for asyncs
+	mutable int        signalMask;
+	mutable QByteArray lastSQL;
 };
 
 QString    QV(const sqlRow& line, const QByteArray& b);
@@ -82,4 +116,5 @@ class SQLBuffering {
 	void append(const QString& sql);
 	void flush();
 };
+
 #endif // MIN_MYSQL_H
