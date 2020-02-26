@@ -109,10 +109,12 @@ st_mysql* DB::connect() const {
 	std::lock_guard<std::mutex> lock(mutex);
 	st_mysql*                   conn = mysql_init(nullptr);
 
-	my_bool reconnect = 1;
-	mysql_options(conn, MYSQL_OPT_RECONNECT, &reconnect);
+	my_bool trueNonSense = 1;
+	mysql_options(conn, MYSQL_OPT_RECONNECT, &trueNonSense );
 	//This will enable non blocking capability
 	mysql_options(conn, MYSQL_OPT_NONBLOCK, 0);
+	//sensibly speed things up
+	mysql_options(conn, MYSQL_OPT_COMPRESS, &trueNonSense);
 
 	mysql_options(conn, MYSQL_SET_CHARSET_NAME, "utf8");
 	//	if(!conf().db.certificate.isEmpty()){
@@ -168,7 +170,7 @@ void SQLBuffering::append(const QString& sql) {
 		return;
 	}
 	//0 disable flushing, 1 disable buffering
-	if (bufferSize && buffer.size() > bufferSize) {
+	if (bufferSize && buffer.size() >= bufferSize) {
 		flush();
 	}
 }
@@ -308,6 +310,30 @@ sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
 	return res;
 }
 
+int DB::fetchAdvanced(FetchVisitor *visitor) const {
+	auto conn = getConn();
+
+	//swap the whole result set we do not expect 1Gb+ result set here
+	MYSQL_RES* result = mysql_use_result(conn);
+	if (!result) {
+		auto error       = mysql_errno(conn);
+		if (error != 0) {
+			qCritical().noquote() << "Mysql error for " << lastSQL.constData() << "error was " << mysql_error(conn) << " code: " << error; // << QStacker(3);
+			throw 1025;
+		}
+	}
+	if(!visitor->preCheck(result)){
+		//???
+		throw QSL("no idea what to do whit this result set!");
+	}
+	while (auto row = mysql_fetch_row(result)) {
+		visitor->processLine(row);
+	}
+	mysql_free_result(result);
+	//no idea what to return
+	return 1;
+}
+
 /**
   why static ? -> https://stackoverflow.com/a/15235626/1040618
   in short is not exported
@@ -380,3 +406,5 @@ void SQLLogger::flush() {
 SQLLogger::~SQLLogger() {
 	flush();
 }
+
+

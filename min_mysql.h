@@ -20,6 +20,7 @@ QString mayBeBase64(const QString& original);
 QString base64Nullable(const QString& param);
 
 struct st_mysql;
+struct st_mysql_res;
 using sqlRow    = QMap<QByteArray, QByteArray>;
 using sqlResult = QList<sqlRow>;
 
@@ -45,6 +46,7 @@ struct SQLLogger {
  * This can also help avoid the insanity of SQLLogger
  * CONST conf -> dynamic connection -> NON Reusable class ?
  */
+class FetchVisitor;
 struct DB {
       public:
 	QByteArray host = "127.0.0.1";
@@ -63,11 +65,12 @@ struct DB {
 	 */
 	void startQuery(const QByteArray& sql) const;
 	void startQuery(const QString& sql) const;
-	void startQuery(const char * sql) const;
+	void startQuery(const char* sql) const;
 	bool completedQuery() const;
 
 	//Shared by both async and not
 	sqlResult fetchResult(SQLLogger* sqlLogger = nullptr) const;
+	int       fetchAdvanced(FetchVisitor* visitor) const;
 	st_mysql* getConn() const;
 	ulong     lastId() const;
 	long      affectedRows() const;
@@ -88,6 +91,13 @@ struct DB {
 	//user for asyncs
 	mutable int        signalMask;
 	mutable QByteArray lastSQL;
+};
+
+typedef char** MYSQL_ROW;
+class FetchVisitor {
+	  public:
+	virtual void processLine(MYSQL_ROW row) = 0;
+	virtual bool preCheck(st_mysql_res* result) = 0;
 };
 
 QString    QV(const sqlRow& line, const QByteArray& b);
