@@ -62,10 +62,19 @@ struct DB {
 	  Those 2 are used toghether for the ASYNC mode
 	 * @brief startQuery
 	 * @param sql
+	 *
 	 */
 	void startQuery(const QByteArray& sql) const;
 	void startQuery(const QString& sql) const;
 	void startQuery(const char* sql) const;
+	/** use something like
+		while (!db.completedQuery()) {
+			usleep(100);
+		}
+		fetch
+	 * @brief completedQuery
+	 * @return
+	 */
 	bool completedQuery() const;
 
 	//Shared by both async and not
@@ -85,7 +94,7 @@ struct DB {
 	bool    sqlLoggerON = false;
 
 	//this will require query + fetchAdvanced
-	bool noFetch = false;
+	mutable bool noFetch = false;
 
       private:
 	//Each thread and each instance will need it's own copy
