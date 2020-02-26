@@ -26,7 +26,7 @@ using sqlResult = QList<sqlRow>;
 
 struct SQLLogger {
 	SQLLogger(const QByteArray& _sql, bool _enabled)
-		: sql(_sql), enabled(_enabled) {
+	    : sql(_sql), enabled(_enabled) {
 	}
 	void flush();
 	~SQLLogger();
@@ -82,7 +82,10 @@ struct DB {
 
 	QString getDefaultDB() const;
 	void    setDefaultDB(const QString& value);
-	bool    saveQuery = false;
+	bool    sqlLoggerON = false;
+
+	//this will require query + fetchAdvanced
+	bool noFetch = false;
 
       private:
 	//Each thread and each instance will need it's own copy
@@ -95,8 +98,8 @@ struct DB {
 
 typedef char** MYSQL_ROW;
 class FetchVisitor {
-	  public:
-	virtual void processLine(MYSQL_ROW row) = 0;
+      public:
+	virtual void processLine(MYSQL_ROW row)     = 0;
 	virtual bool preCheck(st_mysql_res* result) = 0;
 };
 

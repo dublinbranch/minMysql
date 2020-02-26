@@ -5,6 +5,7 @@
 #include <QDebug>
 #include <QFile>
 #include <QMap>
+#include <memory>
 #include <mutex>
 #include <poll.h>
 
@@ -50,7 +51,7 @@ sqlResult DB::query(const QByteArray& sql) const {
 	}
 
 	lastSQL = sql;
-	SQLLogger sqlLogger(sql, saveQuery);
+	SQLLogger sqlLogger(sql, sqlLoggerON);
 
 	mysql_query(conn, sql.constData());
 	auto error = mysql_errno(conn);
@@ -62,6 +63,9 @@ sqlResult DB::query(const QByteArray& sql) const {
 		throw err;
 	}
 
+	if (noFetch) {
+		return sqlResult();
+	}
 	return fetchResult(&sqlLogger);
 }
 
@@ -110,7 +114,7 @@ st_mysql* DB::connect() const {
 	st_mysql*                   conn = mysql_init(nullptr);
 
 	my_bool trueNonSense = 1;
-	mysql_options(conn, MYSQL_OPT_RECONNECT, &trueNonSense );
+	mysql_options(conn, MYSQL_OPT_RECONNECT, &trueNonSense);
 	//This will enable non blocking capability
 	mysql_options(conn, MYSQL_OPT_NONBLOCK, 0);
 	//sensibly speed things up
@@ -226,8 +230,15 @@ void DB::startQuery(const char* sql) const {
 }
 
 bool DB::completedQuery() const {
-	int  err;
-	auto conn  = getConn();
+	auto conn = getConn();
+
+	auto error = mysql_errno(conn);
+	if (error != 0) {
+		qCritical().noquote() << "Mysql error for " << lastSQL.constData() << "error was " << mysql_error(conn) << " code: " << error; // << QStacker(3);
+		throw 1025;
+	}
+	int err;
+
 	auto event = somethingHappened(conn, signalMask);
 	if (event) {
 		event = mysql_real_query_cont(&err, conn, event);
@@ -250,7 +261,7 @@ sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
 	//this is 99.9999% useless and will never again be used
 	auto cry = std::shared_ptr<SQLLogger>();
 	if (!sqlLogger) {
-		cry       = std::make_shared<SQLLogger>(lastSQL, saveQuery);
+		cry       = std::make_shared<SQLLogger>(lastSQL, sqlLoggerON);
 		sqlLogger = cry.get();
 	}
 	sqlLogger->res = &res;
@@ -310,19 +321,19 @@ sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
 	return res;
 }
 
-int DB::fetchAdvanced(FetchVisitor *visitor) const {
+int DB::fetchAdvanced(FetchVisitor* visitor) const {
 	auto conn = getConn();
 
 	//swap the whole result set we do not expect 1Gb+ result set here
 	MYSQL_RES* result = mysql_use_result(conn);
 	if (!result) {
-		auto error       = mysql_errno(conn);
+		auto error = mysql_errno(conn);
 		if (error != 0) {
 			qCritical().noquote() << "Mysql error for " << lastSQL.constData() << "error was " << mysql_error(conn) << " code: " << error; // << QStacker(3);
 			throw 1025;
 		}
 	}
-	if(!visitor->preCheck(result)){
+	if (!visitor->preCheck(result)) {
 		//???
 		throw QSL("no idea what to do whit this result set!");
 	}
@@ -348,9 +359,9 @@ static int somethingHappened(MYSQL* mysql, int status) {
 
 	pfd.fd = mysql_get_socket(mysql);
 	pfd.events =
-		(status & MYSQL_WAIT_READ ? POLLIN : 0) |
-		(status & MYSQL_WAIT_WRITE ? POLLOUT : 0) |
-		(status & MYSQL_WAIT_EXCEPT ? POLLPRI : 0);
+	    (status & MYSQL_WAIT_READ ? POLLIN : 0) |
+	    (status & MYSQL_WAIT_WRITE ? POLLOUT : 0) |
+	    (status & MYSQL_WAIT_EXCEPT ? POLLPRI : 0);
 
 	//We have no reason to wait, either is ready or not
 	res = poll(&pfd, 1, 0);
@@ -406,5 +417,3 @@ void SQLLogger::flush() {
 SQLLogger::~SQLLogger() {
 	flush();
 }
-
-
