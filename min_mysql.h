@@ -52,6 +52,7 @@ struct DB {
 	QByteArray host = "127.0.0.1";
 	QByteArray pass;
 	QByteArray user;
+	QByteArray sock;
 
 	uint      port = 3306;
 	st_mysql* connect() const;

@@ -125,8 +125,13 @@ st_mysql* DB::connect() const {
 	//		mysql_ssl_set(conn,nullptr,nullptr,conf().db.certificate.constData(),nullptr,nullptr);
 
 	//	}
+
+	//For some reason mysql is now complaining of not having a DB selected... just select one and gg
+
+	auto db = getDefaultDB().toUtf8();
 	auto connected = mysql_real_connect(conn, host.constData(), user.constData(), pass.constData(),
-	                                    nullptr, port, nullptr, CLIENT_MULTI_STATEMENTS);
+	                                    db,
+										port, sock.constData(), CLIENT_MULTI_STATEMENTS);
 	if (connected == nullptr) {
 		auto msg = QSL("Mysql connection error (mysql_init).") + mysql_error(conn);
 		throw msg;
@@ -138,8 +143,7 @@ st_mysql* DB::connect() const {
 	query(QBL("SET @@SQL_MODE = 'STRICT_TRANS_TABLES,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';"));
 	query(QBL("SET time_zone='UTC'"));
 
-	//For some reason mysql is now complaining of not having a DB selected... just select one and gg
-	query("use " + getDefaultDB());
+
 	return conn;
 }
 
@@ -383,6 +387,9 @@ static int somethingHappened(MYSQL* mysql, int status) {
 
 void SQLLogger::flush() {
 	if (flushed) {
+		return;
+	}
+	if(!enabled){
 		return;
 	}
 	flushed = true;
