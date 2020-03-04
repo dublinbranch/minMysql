@@ -190,8 +190,10 @@ void SQLBuffering::flush() {
 	if (conn == nullptr) {
 		throw QSL("you forget to set a usable DB Conn!") + QStacker();
 	}
-	buffer.append(QSL("COMMIT;"));
+
 	buffer.prepend(QSL("START TRANSACTION;"));
+	buffer.append(QSL("COMMIT;"));
+
 	conn->query(buffer.join("\n"));
 	buffer.clear();
 }

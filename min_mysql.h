@@ -131,7 +131,7 @@ class SQLBuffering {
 	/**
 	 * @brief SQLBuffering
 	 * @param _conn
-	 * @param _bufferSize 0 disable flushing, 1 disable buffering
+	 * @param _bufferSize 0 disable auto flushing, 1 disable buffering
 	 */
 	SQLBuffering(DB* _conn, int _bufferSize = 1000);
 	SQLBuffering() = default;
