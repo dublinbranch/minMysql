@@ -51,6 +51,7 @@ sqlResult DB::query(const QByteArray& sql) const {
 	}
 
 	lastSQL = sql;
+	lastSQL.detach();
 	SQLLogger sqlLogger(sql, sqlLoggerON);
 
 	mysql_query(conn, sql.constData());
@@ -133,7 +134,7 @@ st_mysql* DB::connect() const {
 	                                    db,
 										port, sock.constData(), CLIENT_MULTI_STATEMENTS);
 	if (connected == nullptr) {
-		auto msg = QSL("Mysql connection error (mysql_init).") + mysql_error(conn);
+		auto msg = QSL("Mysql connection error (mysql_init).") + mysql_error(conn) + QStacker();
 		throw msg;
 	}
 
