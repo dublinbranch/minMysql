@@ -98,12 +98,12 @@ struct DB {
 	mutable bool noFetch = false;
 
       private:
-	//Each thread and each instance will need it's own copy
+	//Architecture is BROKEN, for now Each thread and each instance will need it's own copy -.- next release will fix this atrocity
 	mutable mi_tls<st_mysql*> connPool;
 	QString                   defaultDB;
 	//user for asyncs
-	mutable int        signalMask;
-	mutable QByteArray lastSQL;
+	mutable mi_tls<int>        signalMask;
+	mutable mi_tls<QByteArray> lastSQL;
 };
 
 typedef char** MYSQL_ROW;

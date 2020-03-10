@@ -51,7 +51,6 @@ sqlResult DB::query(const QByteArray& sql) const {
 	}
 
 	lastSQL = sql;
-	lastSQL.detach();
 	SQLLogger sqlLogger(sql, sqlLoggerON);
 
 	mysql_query(conn, sql.constData());
@@ -241,7 +240,7 @@ bool DB::completedQuery() const {
 
 	auto error = mysql_errno(conn);
 	if (error != 0) {
-		qCritical().noquote() << "Mysql error for " << lastSQL.constData() << "error was " << mysql_error(conn) << " code: " << error; // << QStacker(3);
+		qCritical().noquote() << "Mysql error for " << lastSQL.get().constData() << "error was " << mysql_error(conn) << " code: " << error; // << QStacker(3);
 		throw 1025;
 	}
 	int err;
@@ -313,7 +312,7 @@ sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
 	auto error       = mysql_errno(conn);
 	sqlLogger->error = mysql_error(conn);
 	if (error != 0) {
-		qCritical().noquote() << "Mysql error for " << lastSQL.constData() << "error was " << mysql_error(conn) << " code: " << error; // << QStacker(3);
+		qCritical().noquote() << "Mysql error for " << lastSQL.get().constData() << "error was " << mysql_error(conn) << " code: " << error; // << QStacker(3);
 		throw 1025;
 	}
 
@@ -336,7 +335,7 @@ int DB::fetchAdvanced(FetchVisitor* visitor) const {
 	if (!result) {
 		auto error = mysql_errno(conn);
 		if (error != 0) {
-			qCritical().noquote() << "Mysql error for " << lastSQL.constData() << "error was " << mysql_error(conn) << " code: " << error; // << QStacker(3);
+			qCritical().noquote() << "Mysql error for " << lastSQL.get().constData() << "error was " << mysql_error(conn) << " code: " << error; // << QStacker(3);
 			throw 1025;
 		}
 	}

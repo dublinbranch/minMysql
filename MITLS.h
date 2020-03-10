@@ -22,6 +22,10 @@ class mi_tls : protected mi_tls_repository<T> {
 		return *this;
 	}
 
+	T get(){
+		return this->load(reinterpret_cast<uintptr_t>(this));
+	}
+
 	operator T() {
 		return this->load(reinterpret_cast<uintptr_t>(this));
 	}
