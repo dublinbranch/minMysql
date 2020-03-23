@@ -8,3 +8,7 @@ zypper in mariadb-tools
 mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -u root mysql -p
 
 zypper in libmariadb-devel
+
+Link with
+
+LIBS += -lmariadb

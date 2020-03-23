@@ -74,12 +74,11 @@ QString QV(const QMap<QByteArray, QByteArray>& line, const QByteArray& b) {
 }
 
 st_mysql* DB::getConn() const {
-	st_mysql* curConn = connPool;
-	if (curConn == nullptr) {
+	if (conn == nullptr) {
 		//loading in connPool is inside
-		curConn = connect();
+		conn = connect();
 	}
-	return curConn;
+	return conn;
 }
 
 ulong DB::lastId() const {
@@ -94,24 +93,28 @@ long DB::affectedRows() const {
 	return mysql_affected_rows(getConn());
 }
 
-QString DB::getDefaultDB() const {
+QByteArray DBConf::getDefaultDB() const {
 	if (defaultDB.isEmpty()) {
-		auto msg = QSL("default DB is sadly required to havoid mysql complain on certain operation!");
+		auto msg = QSL("default DB is sadly required to avoid mysql complain on certain operation!");
 		qCritical() << msg;
 		throw msg;
 	}
 	return defaultDB;
 }
 
-void DB::setDefaultDB(const QString& value) {
+void DBConf::setDefaultDB(const QByteArray &value) {
 	defaultDB = value;
+}
+
+DB::DB(const DBConf& conf) {
+	this->conf = conf;
 }
 
 st_mysql* DB::connect() const {
 	//Mysql connection stuff is not thread safe!
 	static std::mutex           mutex;
 	std::lock_guard<std::mutex> lock(mutex);
-	st_mysql*                   conn = mysql_init(nullptr);
+	conn = mysql_init(nullptr);
 
 	my_bool trueNonSense = 1;
 	mysql_options(conn, MYSQL_OPT_RECONNECT, &trueNonSense);
@@ -127,19 +130,14 @@ st_mysql* DB::connect() const {
 	//	}
 
 	//For some reason mysql is now complaining of not having a DB selected... just select one and gg
-
-	auto db        = getDefaultDB().toUtf8();
-	auto connected = mysql_real_connect(conn, host.constData(), user.constData(), pass.constData(),
-	                                    db,
-										port, sock.constData(), CLIENT_MULTI_STATEMENTS);
+	auto connected = mysql_real_connect(conn, conf.host, conf.user.constData(), conf.pass.constData(),
+										conf.getDefaultDB(),
+										conf.port, conf.sock.constData(), CLIENT_MULTI_STATEMENTS);
 	if (connected == nullptr) {
 		auto msg = QSL("Mysql connection error (mysql_init).") + mysql_error(conn) + QStacker();
 		throw msg;
 	}
 
-	/***/
-	connPool = conn;
-	/***/
 	query(QBL("SET @@SQL_MODE = 'STRICT_TRANS_TABLES,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';"));
 	query(QBL("SET time_zone='UTC'"));
 
@@ -263,7 +261,7 @@ bool DB::completedQuery() const {
 
 	auto error = mysql_errno(conn);
 	if (error != 0) {
-		qCritical().noquote() << "Mysql error for " << lastSQL.get().constData() << "error was " << mysql_error(conn) << " code: " << error; // << QStacker(3);
+		qCritical().noquote() << "Mysql error for " << lastSQL << "error was " << mysql_error(conn) << " code: " << error << QStacker(3);
 		throw 1025;
 	}
 	int err;
@@ -335,7 +333,7 @@ sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
 	auto error       = mysql_errno(conn);
 	sqlLogger->error = mysql_error(conn);
 	if (error != 0) {
-		qCritical().noquote() << "Mysql error for " << lastSQL.get().constData() << "error was " << mysql_error(conn) << " code: " << error; // << QStacker(3);
+		qCritical().noquote() << "Mysql error for " << lastSQL << "error was " << mysql_error(conn) << " code: " << error << QStacker(3);
 		throw 1025;
 	}
 
@@ -358,7 +356,7 @@ int DB::fetchAdvanced(FetchVisitor* visitor) const {
 	if (!result) {
 		auto error = mysql_errno(conn);
 		if (error != 0) {
-			qCritical().noquote() << "Mysql error for " << lastSQL.get().constData() << "error was " << mysql_error(conn) << " code: " << error; // << QStacker(3);
+			qCritical().noquote() << "Mysql error for " << lastSQL << "error was " << mysql_error(conn) << " code: " << error << QStacker(3);
 			throw 1025;
 		}
 	}

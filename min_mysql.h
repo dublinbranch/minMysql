@@ -37,24 +37,25 @@ struct SQLLogger {
 	bool              enabled = false;
 };
 
-/**
- * @brief The DB struct
- * TODO:
- * detach CONST config from actual class (mutable and const are code smell -.-)
- * just disable copy operator to avoid improper usage, if you pass a DB obj to another thread
- * you are CRAZY! no need to overcomplicate life with mi_tls ?
- * This can also help avoid the insanity of SQLLogger
- * CONST conf -> dynamic connection -> NON Reusable class ?
- */
-class FetchVisitor;
-struct DB {
-      public:
+struct DBConf {
 	QByteArray host = "127.0.0.1";
 	QByteArray pass;
 	QByteArray user;
 	QByteArray sock;
+	uint       port = 3306;
+	QByteArray getDefaultDB() const;
+	void    setDefaultDB(const QByteArray& value);
+private:
+	QByteArray defaultDB;
+};
 
-	uint      port = 3306;
+/**
+ * @brief The DB struct
+ */
+class FetchVisitor;
+struct DB {
+      public:
+	DB(const DBConf& conf);
 	st_mysql* connect() const;
 	sqlResult query(const QString& sql) const;
 	sqlResult query(const QByteArray& sql) const;
@@ -86,24 +87,21 @@ struct DB {
 	long      affectedRows() const;
 
 	//Non copyable
-	DB()        = default;
 	DB& operator=(const DB&) = delete;
 	DB(const DB&)            = delete;
 
-	QString getDefaultDB() const;
-	void    setDefaultDB(const QString& value);
 	bool    sqlLoggerON = false;
 
 	//this will require query + fetchAdvanced
 	mutable bool noFetch = false;
 
       private:
-	//Architecture is BROKEN, for now Each thread and each instance will need it's own copy -.- next release will fix this atrocity
-	mutable mi_tls<st_mysql*> connPool;
-	QString                   defaultDB;
+	DBConf  conf;
+
 	//user for asyncs
-	mutable mi_tls<int>        signalMask;
-	mutable mi_tls<QByteArray> lastSQL;
+	mutable st_mysql*  conn = nullptr;
+	mutable int        signalMask;
+	mutable QByteArray lastSQL;
 };
 
 typedef char** MYSQL_ROW;
