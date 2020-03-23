@@ -59,7 +59,7 @@ sqlResult DB::query(const QByteArray& sql) const {
 		auto err        = QSL("Mysql error for ") + sql.constData() + QSL("error was ") + mysql_error(conn) + QSL(" code: ") + error;
 		sqlLogger.error = err;
 		//this line is needed for proper email error reporting
-		qCritical() << err;
+		qCritical().noquote() << err;
 		throw err;
 	}
 
