@@ -125,7 +125,9 @@ quint64    getId(const sqlResult& res);
 class SQLBuffering {
 	DB*         conn = nullptr;
 	QStringList buffer;
-	int         bufferSize = 1000;
+	uint        bufferSize = 1000;
+	// https://mariadb.com/kb/en/server-system-variables/#max_allowed_packet in our system is always 16M atm
+	uint maxPacket = 16E6;
 
       public:
 	/**

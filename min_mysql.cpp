@@ -128,7 +128,7 @@ st_mysql* DB::connect() const {
 
 	//For some reason mysql is now complaining of not having a DB selected... just select one and gg
 
-	auto db = getDefaultDB().toUtf8();
+	auto db        = getDefaultDB().toUtf8();
 	auto connected = mysql_real_connect(conn, host.constData(), user.constData(), pass.constData(),
 	                                    db,
 										port, sock.constData(), CLIENT_MULTI_STATEMENTS);
@@ -142,7 +142,6 @@ st_mysql* DB::connect() const {
 	/***/
 	query(QBL("SET @@SQL_MODE = 'STRICT_TRANS_TABLES,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';"));
 	query(QBL("SET time_zone='UTC'"));
-
 
 	return conn;
 }
@@ -191,11 +190,35 @@ void SQLBuffering::flush() {
 		throw QSL("you forget to set a usable DB Conn!") + QStacker();
 	}
 
-	buffer.prepend(QSL("START TRANSACTION;"));
-	buffer.append(QSL("COMMIT;"));
+	conn->query(QSL("START TRANSACTION;"));
+	/**
+	 * To avoid having a very big packet we split
+	 * usually max_allowed_packet is https://mariadb.com/kb/en/server-system-variables/#max_allowed_packet
+	   16777216 (16M) >= MariaDB 10.2.4
+		4194304 (4M) >= MariaDB 10.1.7
+		1048576 (1MB) <= MariaDB 10.1.6
+	 1073741824 (1GB) (client-side)
+	 It should be nice to read the value from the conn ... ?
+	 TODO add
+	 show variables like "max_allowed_packet"
+	 */
 
-	conn->query(buffer.join("\n"));
-	buffer.clear();
+	QString query;
+	for (auto&& line : buffer) {
+		query.append(line);
+		query.append(QSL("\n"));
+		//this is UTF16, but MySQL run in UTF8, so can be lowet or bigger (rare vey rare but possible)
+		//small safety margin + increase size for UTF16 -> UTF8 conversion
+		if ((query.size() * 1.3) > maxPacket * 0.75) {
+			conn->query(query);
+			query.clear();
+		}
+	}
+	if (!query.isEmpty()) {
+		conn->query(query);
+		buffer.clear();
+	}
+	conn->query(QSL("COMMIT;"));
 }
 
 QString Q64(const sqlRow& line, const QByteArray& b) {
@@ -391,7 +414,7 @@ void SQLLogger::flush() {
 	if (flushed) {
 		return;
 	}
-	if(!enabled){
+	if (!enabled) {
 		return;
 	}
 	flushed = true;
