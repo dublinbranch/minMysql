@@ -1,7 +1,7 @@
 #ifndef MIN_MYSQL_H
 #define MIN_MYSQL_H
 
-#include "MITLS.h"
+//#include "MITLS.h"
 #include <QStringList>
 
 //Those variable are shared in many places, order of initialization is important!
