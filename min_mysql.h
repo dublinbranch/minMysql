@@ -1,7 +1,7 @@
 #ifndef MIN_MYSQL_H
 #define MIN_MYSQL_H
 
-//#include "MITLS.h"
+#include "MITLS.h"
 #include <QStringList>
 
 //Those variable are shared in many places, order of initialization is important!
@@ -97,11 +97,11 @@ struct DB {
 
       private:
 	DBConf  conf;
-
+	//this allow to spam the DB handler around, and do not worry of thread, each thread will create it's own connection!
+	mutable mi_tls<st_mysql*> connPool;
 	//user for asyncs
-	mutable st_mysql*  conn = nullptr;
-	mutable int        signalMask;
-	mutable QByteArray lastSQL;
+	mutable mi_tls<int>        signalMask;
+	mutable mi_tls<QByteArray> lastSQL;
 };
 
 typedef char** MYSQL_ROW;

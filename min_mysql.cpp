@@ -74,11 +74,12 @@ QString QV(const QMap<QByteArray, QByteArray>& line, const QByteArray& b) {
 }
 
 st_mysql* DB::getConn() const {
-	if (conn == nullptr) {
+	st_mysql* curConn = connPool;
+	if (curConn == nullptr) {
 		//loading in connPool is inside
-		conn = connect();
+		curConn = connect();
 	}
-	return conn;
+	return curConn;
 }
 
 ulong DB::lastId() const {
@@ -102,7 +103,7 @@ QByteArray DBConf::getDefaultDB() const {
 	return defaultDB;
 }
 
-void DBConf::setDefaultDB(const QByteArray &value) {
+void DBConf::setDefaultDB(const QByteArray& value) {
 	defaultDB = value;
 }
 
@@ -114,7 +115,7 @@ st_mysql* DB::connect() const {
 	//Mysql connection stuff is not thread safe!
 	static std::mutex           mutex;
 	std::lock_guard<std::mutex> lock(mutex);
-	conn = mysql_init(nullptr);
+	st_mysql*                   conn = mysql_init(nullptr);
 
 	my_bool trueNonSense = 1;
 	mysql_options(conn, MYSQL_OPT_RECONNECT, &trueNonSense);
@@ -137,6 +138,10 @@ st_mysql* DB::connect() const {
 		auto msg = QSL("Mysql connection error (mysql_init).") + mysql_error(conn) + QStacker();
 		throw msg;
 	}
+
+	/***/
+	connPool = conn;
+	/***/
 
 	query(QBL("SET @@SQL_MODE = 'STRICT_TRANS_TABLES,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';"));
 	query(QBL("SET time_zone='UTC'"));
