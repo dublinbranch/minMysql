@@ -55,6 +55,7 @@ private:
 class FetchVisitor;
 struct DB {
       public:
+	DB() = default;
 	DB(const DBConf& conf);
 	st_mysql* connect() const;
 	sqlResult query(const QString& sql) const;
@@ -95,7 +96,10 @@ struct DB {
 	//this will require query + fetchAdvanced
 	mutable bool noFetch = false;
 
-      private:
+	DBConf getConf() const;
+	void setConf(const DBConf &value);
+
+private:
 	DBConf  conf;
 	//this allow to spam the DB handler around, and do not worry of thread, each thread will create it's own connection!
 	mutable mi_tls<st_mysql*> connPool;

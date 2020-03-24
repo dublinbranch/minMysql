@@ -94,9 +94,19 @@ long DB::affectedRows() const {
 	return mysql_affected_rows(getConn());
 }
 
+DBConf DB::getConf() const
+{
+    return conf;
+}
+
+void DB::setConf(const DBConf &value)
+{
+    conf = value;
+}
+
 QByteArray DBConf::getDefaultDB() const {
-	if (defaultDB.isEmpty()) {
-		auto msg = QSL("default DB is sadly required to avoid mysql complain on certain operation!");
+    if (defaultDB.isEmpty()) {
+        auto msg = QSL("default DB is sadly required to avoid mysql complain on certain operation!");
 		qCritical() << msg;
 		throw msg;
 	}
