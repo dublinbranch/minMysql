@@ -46,7 +46,7 @@ sqlResult DB::query(const QString& sql) const {
 sqlResult DB::query(const QByteArray& sql) const {
 	auto conn = getConn();
 	if (conn == nullptr) {
-		throw QSL("This mysql instance is not connected! \n") + QStacker();
+		throw QSL("This mysql instance is not connected! \n") + QStacker16();
 	}
 
 	lastSQL = sql;
@@ -149,7 +149,7 @@ st_mysql* DB::connect() const {
 										conf.getDefaultDB(),
 										conf.port, conf.sock.constData(), CLIENT_MULTI_STATEMENTS);
 	if (connected == nullptr) {
-		auto msg = QSL("Mysql connection error (mysql_init).") + mysql_error(conn) + QStacker();
+		auto msg = QSL("Mysql connection error (mysql_init).") + mysql_error(conn) + QStacker16();
 		throw msg;
 	}
 
@@ -175,7 +175,7 @@ quint64 getId(const sqlResult& res) {
 			}
 		}
 	}
-	qCritical().noquote() << "error fetching last_id" << QStacker();
+	qCritical().noquote() << "error fetching last_id" << QStacker16();
 	return 0;
 }
 
@@ -204,7 +204,7 @@ void SQLBuffering::flush() {
 		return;
 	}
 	if (conn == nullptr) {
-		throw QSL("you forget to set a usable DB Conn!") + QStacker();
+		throw QSL("you forget to set a usable DB Conn!") + QStacker16();
 	}
 
 	conn->query(QSL("START TRANSACTION;"));
