@@ -8,13 +8,12 @@
 #include <memory>
 #include <mutex>
 #include <poll.h>
+#include "QStacker/qstacker.h"
 
 #define QBL(str) QByteArrayLiteral(str)
 #define QSL(str) QStringLiteral(str)
 
 static int somethingHappened(MYSQL* mysql, int status);
-
-QByteArray QStacker(uint skip = 0);
 
 QString base64this(const char* param) {
 	//no alloc o.O
@@ -96,12 +95,16 @@ long DB::affectedRows() const {
 
 DBConf DB::getConf() const
 {
+	if(!confSet){
+		throw QSL("you have not set the configuration!") + QStacker16();
+	}
     return conf;
 }
 
 void DB::setConf(const DBConf &value)
 {
     conf = value;
+	confSet = true;
 }
 
 QByteArray DBConf::getDefaultDB() const {
@@ -140,6 +143,7 @@ st_mysql* DB::connect() const {
 
 	//	}
 
+	getConf();
 	//For some reason mysql is now complaining of not having a DB selected... just select one and gg
 	auto connected = mysql_real_connect(conn, conf.host, conf.user.constData(), conf.pass.constData(),
 										conf.getDefaultDB(),

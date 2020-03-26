@@ -44,8 +44,9 @@ struct DBConf {
 	QByteArray sock;
 	uint       port = 3306;
 	QByteArray getDefaultDB() const;
-	void    setDefaultDB(const QByteArray& value);
-private:
+	void       setDefaultDB(const QByteArray& value);
+
+	  private:
 	QByteArray defaultDB;
 };
 
@@ -91,16 +92,17 @@ struct DB {
 	DB& operator=(const DB&) = delete;
 	DB(const DB&)            = delete;
 
-	bool    sqlLoggerON = false;
+	bool sqlLoggerON = false;
 
 	//this will require query + fetchAdvanced
 	mutable bool noFetch = false;
 
 	DBConf getConf() const;
-	void setConf(const DBConf &value);
+	void   setConf(const DBConf& value);
 
-private:
-	DBConf  conf;
+	  private:
+	bool   confSet = false;
+	DBConf conf;
 	//this allow to spam the DB handler around, and do not worry of thread, each thread will create it's own connection!
 	mutable mi_tls<st_mysql*> connPool;
 	//user for asyncs
