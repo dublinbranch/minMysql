@@ -58,7 +58,7 @@ sqlResult DB::query(const QByteArray& sql) const {
 		switch (error) {
 			case 1065:
 			//well an empty query is bad, but not too much!
-			qCritical() << "empty query (or equivalent for) " << sql << "in" << QStacker16();
+			qCritical().noquote() << "empty query (or equivalent for) " << sql << "in" << QStacker16();
 			return sqlResult();
 		}
 		auto err        = QSL("Mysql error for ") + sql.constData() + QSL("error was ") + mysql_error(conn) + QSL(" code: ") + error;
