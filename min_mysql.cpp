@@ -248,7 +248,9 @@ void SQLBuffering::flush() {
 	 */
 
 	//This MUST be out of the buffered block!
-	QString query = QSL("START TRANSACTION;");
+	conn->query(QSL("START TRANSACTION;"));
+
+	QString query;
 	for (auto&& line : buffer) {
 		query.append(line);
 		query.append(QSL("\n"));
@@ -264,6 +266,7 @@ void SQLBuffering::flush() {
 	}
 	//This MUST be out of the buffered block!
 	conn->query(QSL("COMMIT;"));
+	buffer.clear();
 }
 
 QString Q64(const sqlRow& line, const QByteArray& b) {
