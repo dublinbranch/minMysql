@@ -4,6 +4,11 @@
 #include "MITLS.h"
 #include <QStringList>
 
+enum MyError : unsigned int {
+	noError  = 0,
+	deadlock = 1213
+};
+
 //Those variable are shared in many places, order of initialization is important!
 //Inline will avoid to have multiple copy, and enforces having a single one
 inline const QString    mysqlDateFormat     = "yyyy-MM-dd";
@@ -61,6 +66,8 @@ struct DB {
 	st_mysql* connect() const;
 	sqlResult query(const QString& sql) const;
 	sqlResult query(const QByteArray& sql) const;
+	//This is to be used ONLY in case the query can have deadlock, and internally tries multiple times to insert data
+	sqlResult queryDeadlockRepeater(const QByteArray& sql, uint maxTry = 5) const;
 	sqlResult query(const char* sql) const;
 	/**
 	  Those 2 are used toghether for the ASYNC mode

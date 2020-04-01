@@ -1,4 +1,5 @@
 #include "min_mysql.h"
+#include "QStacker/qstacker.h"
 #include "mysql/mysql.h"
 #include <QDataStream>
 #include <QDateTime>
@@ -8,7 +9,6 @@
 #include <memory>
 #include <mutex>
 #include <poll.h>
-#include "QStacker/qstacker.h"
 
 #define QBL(str) QByteArrayLiteral(str)
 #define QSL(str) QStringLiteral(str)
@@ -56,7 +56,7 @@ sqlResult DB::query(const QByteArray& sql) const {
 	auto error = mysql_errno(conn);
 	if (error) {
 		switch (error) {
-			case 1065:
+		case 1065:
 			//well an empty query is bad, but not too much!
 			qCritical().noquote() << "empty query (or equivalent for) " << sql << "in" << QStacker16();
 			return sqlResult();
@@ -72,6 +72,31 @@ sqlResult DB::query(const QByteArray& sql) const {
 		return sqlResult();
 	}
 	return fetchResult(&sqlLogger);
+}
+
+sqlResult DB::queryDeadlockRepeater(const QByteArray& sql, uint maxTry) const {
+	sqlResult result;
+	if (!sql.isEmpty()) {
+		for (uint tryNum = 0; tryNum < maxTry; ++tryNum) {
+			try {
+				return query(sql);
+			} catch (unsigned int error) {
+				switch (error) {
+				case MyError::noError:
+					return result;
+					break;
+				case MyError::deadlock:
+					continue;
+					break;
+				default:;
+					throw error;
+				}
+			}
+		}
+		qCritical().noquote() << "too many trial to resolve deadlock, fix your code!" + QStacker16();
+		throw MyError::deadlock;
+	}
+	return result;
 }
 
 QString QV(const QMap<QByteArray, QByteArray>& line, const QByteArray& b) {
@@ -99,23 +124,21 @@ long DB::affectedRows() const {
 	return mysql_affected_rows(getConn());
 }
 
-DBConf DB::getConf() const
-{
-	if(!confSet){
+DBConf DB::getConf() const {
+	if (!confSet) {
 		throw QSL("you have not set the configuration!") + QStacker16();
 	}
-    return conf;
+	return conf;
 }
 
-void DB::setConf(const DBConf &value)
-{
-    conf = value;
+void DB::setConf(const DBConf& value) {
+	conf    = value;
 	confSet = true;
 }
 
 QByteArray DBConf::getDefaultDB() const {
-    if (defaultDB.isEmpty()) {
-        auto msg = QSL("default DB is sadly required to avoid mysql complain on certain operation!");
+	if (defaultDB.isEmpty()) {
+		auto msg = QSL("default DB is sadly required to avoid mysql complain on certain operation!");
 		qCritical() << msg;
 		throw msg;
 	}
@@ -212,8 +235,6 @@ void SQLBuffering::flush() {
 	if (conn == nullptr) {
 		throw QSL("you forget to set a usable DB Conn!") + QStacker16();
 	}
-
-	conn->query(QSL("START TRANSACTION;"));
 	/**
 	 * To avoid having a very big packet we split
 	 * usually max_allowed_packet is https://mariadb.com/kb/en/server-system-variables/#max_allowed_packet
@@ -226,21 +247,22 @@ void SQLBuffering::flush() {
 	 show variables like "max_allowed_packet"
 	 */
 
-	QString query;
+	//This MUST be out of the buffered block!
+	QString query = QSL("START TRANSACTION;");
 	for (auto&& line : buffer) {
 		query.append(line);
 		query.append(QSL("\n"));
 		//this is UTF16, but MySQL run in UTF8, so can be lowet or bigger (rare vey rare but possible)
 		//small safety margin + increase size for UTF16 -> UTF8 conversion
 		if ((query.size() * 1.3) > maxPacket * 0.75) {
-			conn->query(query);
+			conn->queryDeadlockRepeater(query.toUtf8());
 			query.clear();
 		}
 	}
 	if (!query.isEmpty()) {
-		conn->query(query);
-		buffer.clear();
+		conn->queryDeadlockRepeater(query.toUtf8());
 	}
+	//This MUST be out of the buffered block!
 	conn->query(QSL("COMMIT;"));
 }
 
@@ -355,11 +377,11 @@ sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
 		qDebug().noquote() << "warning for " << lastSQL << query(QBL("SHOW WARNINGS"));
 	}
 
-	auto error       = mysql_errno(conn);
-	sqlLogger->error = mysql_error(conn);
-	if (error != 0) {
+	unsigned int error = mysql_errno(conn);
+	sqlLogger->error   = mysql_error(conn);
+	if (error) {
 		qCritical().noquote() << "Mysql error for " << lastSQL << "error was " << mysql_error(conn) << " code: " << error << QStacker(3);
-		throw 1025;
+		throw error;
 	}
 
 	auto v = mysql_insert_id(conn);
