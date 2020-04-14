@@ -43,6 +43,7 @@ struct SQLLogger {
 };
 
 struct DBConf {
+	QByteArray caCert;
 	QByteArray host = "127.0.0.1";
 	QByteArray pass;
 	QByteArray user;
@@ -51,7 +52,7 @@ struct DBConf {
 	QByteArray getDefaultDB() const;
 	void       setDefaultDB(const QByteArray& value);
 
-	  private:
+      private:
 	QByteArray defaultDB;
 };
 
@@ -107,7 +108,7 @@ struct DB {
 	DBConf getConf() const;
 	void   setConf(const DBConf& value);
 
-	  private:
+      private:
 	bool   confSet = false;
 	DBConf conf;
 	//this allow to spam the DB handler around, and do not worry of thread, each thread will create it's own connection!
