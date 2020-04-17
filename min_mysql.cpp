@@ -156,6 +156,14 @@ DB::DB(const DBConf& conf) {
 	setConf(conf);
 }
 
+DB::~DB() {
+	st_mysql* curConn = connPool;
+	if (curConn) {
+		mysql_close(curConn);
+		connPool = nullptr;
+	}
+}
+
 st_mysql* DB::connect() const {
 	//Mysql connection stuff is not thread safe!
 	static std::mutex           mutex;
@@ -170,16 +178,15 @@ st_mysql* DB::connect() const {
 	mysql_options(conn, MYSQL_OPT_COMPRESS, &trueNonSense);
 
 	mysql_options(conn, MYSQL_SET_CHARSET_NAME, "utf8");
-	//	if(!conf().db.certificate.isEmpty()){
-	//		mysql_ssl_set(conn,nullptr,nullptr,conf().db.certificate.constData(),nullptr,nullptr);
-
-	//	}
+	if (!conf.caCert.isEmpty()) {
+		mysql_ssl_set(conn, nullptr, nullptr, nullptr, conf.caCert.constData(), nullptr);
+	}
 
 	getConf();
 	//For some reason mysql is now complaining of not having a DB selected... just select one and gg
 	auto connected = mysql_real_connect(conn, conf.host, conf.user.constData(), conf.pass.constData(),
-										conf.getDefaultDB(),
-										conf.port, conf.sock.constData(), CLIENT_MULTI_STATEMENTS);
+	                                    conf.getDefaultDB(),
+	                                    conf.port, conf.sock.constData(), CLIENT_MULTI_STATEMENTS);
 	if (connected == nullptr) {
 		auto msg = QSL("Mysql connection error (mysql_init).") + mysql_error(conn) + QStacker16Light();
 		throw msg;
@@ -193,6 +200,18 @@ st_mysql* DB::connect() const {
 	query(QBL("SET time_zone='UTC'"));
 
 	return conn;
+}
+
+bool DB::tryConnect() const {
+	try {
+		//We ignore the throw inside db.connect, in 99.99999% of the case spamming is the right thing to do, but not here and now!
+		cxaLevel = CxaLevel::none;
+		connect();
+		return true;
+	} catch (...) {
+		qDebug() << "impossible to connect on " << conf.host << conf.port;
+		return false;
+	}
 }
 
 quint64 getId(const sqlResult& res) {
@@ -290,6 +309,17 @@ QString base64Nullable(const QString& param) {
 
 sqlResult DB::query(const char* sql) const {
 	return query(QByteArray(sql));
+}
+
+bool DB::isSSL() const {
+	auto res = query("SHOW STATUS LIKE 'Ssl_cipher'");
+	if (res.isEmpty()) {
+		return false;
+	} else {
+		auto cypher = res[0]["Value"];
+		//whatever is set means is ok
+		return cypher.length() > 5;
+	}
 }
 
 void DB::startQuery(const QByteArray& sql) const {
