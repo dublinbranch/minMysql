@@ -65,6 +65,7 @@ sqlResult DB::query(const QByteArray& sql) const {
 		sqlLogger.error = err;
 		//this line is needed for proper email error reporting
 		qCritical().noquote() << err << QStacker16();
+		cxaNoStack = true;
 		throw err;
 	}
 
@@ -94,6 +95,7 @@ sqlResult DB::queryDeadlockRepeater(const QByteArray& sql, uint maxTry) const {
 			}
 		}
 		qCritical().noquote() << "too many trial to resolve deadlock, fix your code!" + QStacker16();
+		cxaNoStack = true;
 		throw MyError::deadlock;
 	}
 	return result;
@@ -124,8 +126,9 @@ long DB::affectedRows() const {
 	return mysql_affected_rows(getConn());
 }
 
-DBConf DB::getConf() const {
+const DBConf DB::getConf() const {
 	if (!confSet) {
+		cxaNoStack = true;
 		throw QSL("you have not set the configuration!") + QStacker16();
 	}
 	return conf;
@@ -150,7 +153,7 @@ void DBConf::setDefaultDB(const QByteArray& value) {
 }
 
 DB::DB(const DBConf& conf) {
-	this->conf = conf;
+	setConf(conf);
 }
 
 st_mysql* DB::connect() const {
@@ -178,7 +181,7 @@ st_mysql* DB::connect() const {
 										conf.getDefaultDB(),
 										conf.port, conf.sock.constData(), CLIENT_MULTI_STATEMENTS);
 	if (connected == nullptr) {
-		auto msg = QSL("Mysql connection error (mysql_init).") + mysql_error(conn) + QStacker16();
+		auto msg = QSL("Mysql connection error (mysql_init).") + mysql_error(conn) + QStacker16Light();
 		throw msg;
 	}
 
@@ -384,6 +387,7 @@ sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
 	sqlLogger->error   = mysql_error(conn);
 	if (error) {
 		qCritical().noquote() << "Mysql error for " << lastSQL << "error was " << mysql_error(conn) << " code: " << error << QStacker(3);
+		cxaNoStack = true;
 		throw error;
 	}
 
@@ -407,6 +411,7 @@ int DB::fetchAdvanced(FetchVisitor* visitor) const {
 		auto error = mysql_errno(conn);
 		if (error != 0) {
 			qCritical().noquote() << "Mysql error for " << lastSQL << "error was " << mysql_error(conn) << " code: " << error << QStacker(3);
+			cxaNoStack = true;
 			throw 1025;
 		}
 	}

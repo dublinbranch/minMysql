@@ -105,7 +105,7 @@ struct DB {
 	//this will require query + fetchAdvanced
 	mutable bool noFetch = false;
 
-	DBConf getConf() const;
+	const DBConf getConf() const;
 	void   setConf(const DBConf& value);
 
       private:
