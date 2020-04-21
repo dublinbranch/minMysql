@@ -204,6 +204,8 @@ st_mysql* DB::connect() const {
 
 bool DB::tryConnect() const {
 	try {
+		//In try connect. connection error are now very bad...
+		cxaLevel = CxaLevel::debug;
 		connect();
 		return true;
 	} catch (...) {
