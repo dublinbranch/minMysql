@@ -204,12 +204,9 @@ st_mysql* DB::connect() const {
 
 bool DB::tryConnect() const {
 	try {
-		//We ignore the throw inside db.connect, in 99.99999% of the case spamming is the right thing to do, but not here and now!
-		cxaLevel = CxaLevel::none;
 		connect();
 		return true;
 	} catch (...) {
-		qDebug() << "impossible to connect on " << conf.host << conf.port;
 		return false;
 	}
 }
