@@ -188,7 +188,7 @@ st_mysql* DB::connect() const {
 	                                    conf.getDefaultDB(),
 	                                    conf.port, conf.sock.constData(), CLIENT_MULTI_STATEMENTS);
 	if (connected == nullptr) {
-		auto msg = QSL("Mysql connection error (mysql_init).") + mysql_error(conn) + QStacker16Light();
+		auto msg = QSL("Mysql connection error (mysql_init). for %1 : %2 ").arg(QString(conf.host)).arg(conf.port) + mysql_error(conn) + QStacker16Light();
 		throw msg;
 	}
 
