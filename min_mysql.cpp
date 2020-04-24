@@ -58,13 +58,13 @@ sqlResult DB::query(const QByteArray& sql) const {
 		switch (error) {
 		case 1065:
 			//well an empty query is bad, but not too much!
-			qCritical().noquote() << "empty query (or equivalent for) " << sql << "in" << QStacker16();
+			qWarning().noquote() << "empty query (or equivalent for) " << sql << "in" << QStacker16();
 			return sqlResult();
 		}
 		auto err        = QSL("Mysql error for ") + sql.constData() + QSL("error was ") + mysql_error(conn) + QSL(" code: ") + error;
 		sqlLogger.error = err;
 		//this line is needed for proper email error reporting
-		qCritical().noquote() << err << QStacker16();
+		qWarning().noquote() << err << QStacker16();
 		cxaNoStack = true;
 		throw err;
 	}
@@ -94,7 +94,7 @@ sqlResult DB::queryDeadlockRepeater(const QByteArray& sql, uint maxTry) const {
 				}
 			}
 		}
-		qCritical().noquote() << "too many trial to resolve deadlock, fix your code!" + QStacker16();
+		qWarning().noquote() << "too many trial to resolve deadlock, fix your code!" + QStacker16();
 		cxaNoStack = true;
 		throw MyError::deadlock;
 	}
@@ -142,7 +142,7 @@ void DB::setConf(const DBConf& value) {
 QByteArray DBConf::getDefaultDB() const {
 	if (defaultDB.isEmpty()) {
 		auto msg = QSL("default DB is sadly required to avoid mysql complain on certain operation!");
-		qCritical().noquote() << msg;
+		qWarning().noquote() << msg;
 		throw msg;
 	}
 	return defaultDB;
@@ -225,7 +225,7 @@ quint64 getId(const sqlResult& res) {
 			}
 		}
 	}
-	qCritical().noquote() << "error fetching last_id" << QStacker16();
+	qWarning().noquote() << "error fetching last_id" << QStacker16();
 	return 0;
 }
 
@@ -343,7 +343,7 @@ bool DB::completedQuery() const {
 
 	auto error = mysql_errno(conn);
 	if (error != 0) {
-		qCritical().noquote() << "Mysql error for " << lastSQL << "error was " << mysql_error(conn) << " code: " << error << QStacker(3);
+		qWarning().noquote() << "Mysql error for " << lastSQL << "error was " << mysql_error(conn) << " code: " << error << QStacker(3);
 		throw 1025;
 	}
 	int err;
@@ -415,7 +415,7 @@ sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
 	unsigned int error = mysql_errno(conn);
 	sqlLogger->error   = mysql_error(conn);
 	if (error) {
-		qCritical().noquote() << "Mysql error for " << lastSQL << "error was " << mysql_error(conn) << " code: " << error << QStacker(3);
+		qWarning().noquote() << "Mysql error for " << lastSQL << "error was " << mysql_error(conn) << " code: " << error << QStacker(3);
 		cxaNoStack = true;
 		throw error;
 	}
@@ -439,7 +439,7 @@ int DB::fetchAdvanced(FetchVisitor* visitor) const {
 	if (!result) {
 		auto error = mysql_errno(conn);
 		if (error != 0) {
-			qCritical().noquote() << "Mysql error for " << lastSQL << "error was " << mysql_error(conn) << " code: " << error << QStacker(3);
+			qWarning().noquote() << "Mysql error for " << lastSQL << "error was " << mysql_error(conn) << " code: " << error << QStacker(3);
 			cxaNoStack = true;
 			throw 1025;
 		}
@@ -509,7 +509,7 @@ void SQLLogger::flush() {
 	if (!file.isOpen()) {
 		file.setFileName("sql.log");
 		if (!file.open(QIODevice::WriteOnly | QIODevice::Append)) {
-			qCritical().noquote() << "impossible to open sql.log";
+			qWarning().noquote() << "impossible to open sql.log";
 			return;
 		}
 	}
