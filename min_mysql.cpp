@@ -142,7 +142,7 @@ void DB::setConf(const DBConf& value) {
 QByteArray DBConf::getDefaultDB() const {
 	if (defaultDB.isEmpty()) {
 		auto msg = QSL("default DB is sadly required to avoid mysql complain on certain operation!");
-		qCritical() << msg;
+		qCritical().noquote() << msg;
 		throw msg;
 	}
 	return defaultDB;
@@ -509,7 +509,7 @@ void SQLLogger::flush() {
 	if (!file.isOpen()) {
 		file.setFileName("sql.log");
 		if (!file.open(QIODevice::WriteOnly | QIODevice::Append)) {
-			qCritical() << "impossible to open sql.log";
+			qCritical().noquote() << "impossible to open sql.log";
 			return;
 		}
 	}
