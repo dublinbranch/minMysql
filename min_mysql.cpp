@@ -10,9 +10,6 @@
 #include <mutex>
 #include <poll.h>
 
-#define QBL(str) QByteArrayLiteral(str)
-#define QSL(str) QStringLiteral(str)
-
 static int somethingHappened(MYSQL* mysql, int status);
 
 QString base64this(const char* param) {

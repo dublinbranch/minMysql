@@ -4,6 +4,11 @@
 #include "MITLS.h"
 #include <QStringList>
 
+#ifndef QBL
+#define QBL(str) QByteArrayLiteral(str)
+#define QSL(str) QStringLiteral(str)
+#endif
+
 enum MyError : unsigned int {
 	noError  = 0,
 	deadlock = 1213
@@ -43,12 +48,12 @@ struct SQLLogger {
 };
 
 struct DBConf {
-	QByteArray caCert;
 	QByteArray host = "127.0.0.1";
 	QByteArray pass;
 	QByteArray user;
-	QByteArray sock;
 	uint       port = 3306;
+	QByteArray sock;
+	QByteArray caCert;
 	QByteArray getDefaultDB() const;
 	void       setDefaultDB(const QByteArray& value);
 
