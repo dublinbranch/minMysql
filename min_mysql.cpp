@@ -528,3 +528,11 @@ void SQLLogger::flush() {
 SQLLogger::~SQLLogger() {
 	flush();
 }
+
+QString nullOnZero(uint v) {
+	if (v) {
+		return QString::number(v);
+	} else {
+		return SQL_NULL;
+	}
+}
