@@ -58,7 +58,7 @@ sqlResult DB::query(const QByteArray& sql) const {
 			qWarning().noquote() << "empty query (or equivalent for) " << sql << "in" << QStacker16();
 			return sqlResult();
 		}
-		auto err        = QSL("Mysql error for ") + sql.constData() + QSL("error was ") + mysql_error(conn) + QSL(" code: ") + error;
+		auto err        = QSL("Mysql error for ") + sql.constData() + QSL("\nerror was ") + mysql_error(conn) + QSL(" code: ") + error;
 		sqlLogger.error = err;
 		//this line is needed for proper email error reporting
 		qWarning().noquote() << err << QStacker16();
