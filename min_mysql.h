@@ -28,6 +28,7 @@ QString base64this(const QByteArray& param);
 QString base64this(const QString& param);
 QString mayBeBase64(const QString& original);
 QString base64Nullable(const QString& param);
+QString nullOnZero(uint v);
 
 struct st_mysql;
 struct st_mysql_res;
