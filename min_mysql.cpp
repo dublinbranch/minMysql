@@ -31,9 +31,15 @@ QString base64this(const QString& param) {
 QString mayBeBase64(const QString& original) {
 	if (original == SQL_NULL) {
 		return original;
+	} else if (original.isEmpty()) {
+		return QSL("''");
 	} else {
 		return base64this(original);
 	}
+}
+
+QString base64Nullable(const QString& param) {
+	return mayBeBase64(param);
 }
 
 sqlResult DB::query(const QString& sql) const {
@@ -293,14 +299,6 @@ QString Q64(const sqlRow& line, const QByteArray& b) {
 
 QByteArray Q8(const sqlRow& line, const QByteArray& b) {
 	return line.value(b);
-}
-
-QString base64Nullable(const QString& param) {
-	if (param == SQL_NULL) {
-		return param;
-	}
-	auto a = param.toUtf8().toBase64();
-	return QBL("FROM_BASE64('") + a + QBL("')");
 }
 
 sqlResult DB::query(const char* sql) const {
