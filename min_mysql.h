@@ -4,6 +4,7 @@
 #include "MITLS.h"
 #include <QStringList>
 
+
 #ifndef QBL
 #define QBL(str) QByteArrayLiteral(str)
 #define QSL(str) QStringLiteral(str)
@@ -37,24 +38,33 @@ using sqlResult = QList<sqlRow>;
 
 struct SQLLogger {
 	SQLLogger(const QByteArray& _sql, bool _enabled)
-	    : sql(_sql), enabled(_enabled) {
+	    : sql(_sql), logError(_enabled) {
 	}
+	SQLLogger() = default;
 	void flush();
 	~SQLLogger();
-	bool              flushed = false;
-	const QByteArray& sql;
-	const sqlResult*  res = nullptr;
-	QString           error;
-	bool              enabled = false;
+
+	qint64           serverTime;
+	qint64           fetchTime;
+	const QByteArray sql;
+	const sqlResult* res = nullptr;
+	QString          error;
+	bool             logSql   = false;
+	bool             logError = false;
+	bool             flushed  = false;
 };
 
 struct DBConf {
 	QByteArray host = "127.0.0.1";
 	QByteArray pass;
 	QByteArray user;
-	uint       port = 3306;
 	QByteArray sock;
 	QByteArray caCert;
+
+	uint port     = 3306;
+	bool logSql   = false;
+	bool logError = false;
+
 	QByteArray getDefaultDB() const;
 	void       setDefaultDB(const QByteArray& value);
 
@@ -108,8 +118,6 @@ struct DB {
 	//Non copyable
 	DB& operator=(const DB&) = delete;
 	DB(const DB&)            = delete;
-
-	bool sqlLoggerON = false;
 
 	//this will require query + fetchAdvanced
 	mutable bool noFetch = false;

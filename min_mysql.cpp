@@ -4,6 +4,7 @@
 #include <QDataStream>
 #include <QDateTime>
 #include <QDebug>
+#include <QElapsedTimer>
 #include <QFile>
 #include <QMap>
 #include <memory>
@@ -53,9 +54,16 @@ sqlResult DB::query(const QByteArray& sql) const {
 	}
 
 	lastSQL = sql;
-	SQLLogger sqlLogger(sql, sqlLoggerON);
+	SQLLogger sqlLogger(sql, conf.logError);
+	sqlLogger.logSql = conf.logSql;
+	{
+		QElapsedTimer timer;
+		timer.start();
 
-	mysql_query(conn, sql.constData());
+		mysql_query(conn, sql.constData());
+
+		sqlLogger.serverTime = timer.nsecsElapsed();
+	}
 	auto error = mysql_errno(conn);
 	if (error) {
 		switch (error) {
@@ -358,17 +366,15 @@ bool DB::completedQuery() const {
 }
 
 sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
+	QElapsedTimer timer;
+	timer.start(); //this will be stopped in the destructor of sql logger
 	//most inefficent way, but most easy to use!
 	sqlResult res;
 	res.reserve(512);
 
-	//this is 99.9999% useless and will never again be used
-	auto cry = std::shared_ptr<SQLLogger>();
-	if (!sqlLogger) {
-		cry       = std::make_shared<SQLLogger>(lastSQL, sqlLoggerON);
-		sqlLogger = cry.get();
+	if (sqlLogger) {
+		sqlLogger->res = &res;
 	}
-	sqlLogger->res = &res;
 
 	auto conn = getConn();
 	//If you batch more than two select, you are crazy, just the first one will be returned and you will be in bad situation later
@@ -397,9 +403,9 @@ sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
 				res.push_back(thisItem);
 			}
 			mysql_free_result(result);
-			return res;
 		}
 	} while (mysql_next_result(conn) == 0);
+	sqlLogger->fetchTime = timer.nsecsElapsed();
 
 	//auto affected  = mysql_affected_rows(conn);
 	auto warnCount = mysql_warning_count(conn);
@@ -408,7 +414,9 @@ sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
 	}
 
 	unsigned int error = mysql_errno(conn);
-	sqlLogger->error   = mysql_error(conn);
+	if (error && sqlLogger) {
+		sqlLogger->error = mysql_error(conn);
+	}
 	if (error) {
 		qWarning().noquote() << "Mysql error for " << lastSQL << "error was " << mysql_error(conn) << " code: " << error << QStacker(3);
 		cxaNoStack = true;
@@ -491,7 +499,7 @@ void SQLLogger::flush() {
 	if (flushed) {
 		return;
 	}
-	if (!enabled) {
+	if (!(logError || logSql)) {
 		return;
 	}
 	flushed = true;
@@ -511,15 +519,23 @@ void SQLLogger::flush() {
 
 	QDateTime myDateTime = QDateTime::currentDateTime();
 	QString   time       = myDateTime.toString(Qt::ISODateWithMs);
-
-	file.write(time.toUtf8() + QBL("\nError: ") + error.toUtf8() + QBL("\n") + sql);
-	if (res && !res->isEmpty()) {
-		file.write("\n");
-		//nice trick to use qDebug operator << on a custom stream!
-		QDebug dbg(&file);
-		dbg << (*res);
+	file.write(time.toUtf8() + "\n");
+	
+	double query = serverTime / 1E9;
+	double fetch = fetchTime / 1E9;
+	QByteArray buff = "Query: " + QByteArray::number(query,'E',3);
+	file.write(buff.leftJustified(20,' ').append("Fetch: " + QByteArray::number(fetch,'E',3)) + "\n" + sql);
+	if (!error.isEmpty()) {
+		file.write(QBL("\nError: ") + error.toUtf8());
+		if (res && !res->isEmpty()) {
+			file.write("\n");
+			//nice trick to use qDebug operator << on a custom stream!
+			QDebug dbg(&file);
+			dbg << (*res);
+		}
 	}
-	file.write("\n--------\n");
+
+	file.write("\n-------------\n");
 	file.flush();
 }
 
