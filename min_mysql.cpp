@@ -423,10 +423,11 @@ sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
 		throw error;
 	}
 
-	auto v = mysql_insert_id(conn);
-	if (v > 0) {
+	auto curLastId = mysql_insert_id(conn);
+	if (curLastId > 0 && lastIdval != curLastId) {
+		lastIdval = curLastId;
 		sqlRow thisItem;
-		thisItem.insert(QBL("last_id"), QByteArray::number(v));
+		thisItem.insert(QBL("last_id"), QByteArray::number(curLastId));
 		res.push_back(thisItem);
 		return res;
 	}
