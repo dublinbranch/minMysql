@@ -410,7 +410,7 @@ sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
 	//auto affected  = mysql_affected_rows(conn);
 	auto warnCount = mysql_warning_count(conn);
 	if (warnCount) {
-		qDebug().noquote() << "warning for " << lastSQL << query(QBL("SHOW WARNINGS"));
+		qDebug().noquote() << "warning for " << lastSQL << query(QBL("SHOW WARNINGS")) << "\n";
 	}
 
 	unsigned int error = mysql_errno(conn);
