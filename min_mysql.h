@@ -4,7 +4,6 @@
 #include "MITLS.h"
 #include <QStringList>
 
-
 #ifndef QBL
 #define QBL(str) QByteArrayLiteral(str)
 #define QSL(str) QStringLiteral(str)
@@ -121,6 +120,8 @@ struct DB {
 
 	//this will require query + fetchAdvanced
 	mutable bool noFetch = false;
+	//JUST For the next query the WARNING spam will be suppressed, use if you understand what you are doing
+	mutable bool skipWarning = false;
 
 	const DBConf getConf() const;
 	void         setConf(const DBConf& value);
@@ -135,7 +136,6 @@ struct DB {
 	mutable mi_tls<QByteArray> lastSQL;
 	//The value is not RESETTED if the last query do not use a insert, IE if you do a select after an insert it will still be there!
 	mutable mi_tls<unsigned long long> lastIdval;
-	
 };
 
 typedef char** MYSQL_ROW;

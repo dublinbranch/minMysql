@@ -408,9 +408,14 @@ sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
 	sqlLogger->fetchTime = timer.nsecsElapsed();
 
 	//auto affected  = mysql_affected_rows(conn);
-	auto warnCount = mysql_warning_count(conn);
-	if (warnCount) {
-		qDebug().noquote() << "warning for " << lastSQL << query(QBL("SHOW WARNINGS")) << "\n";
+	if (skipWarning) {
+		//reset
+		skipWarning = false;
+	} else {
+		auto warnCount = mysql_warning_count(conn);
+		if (warnCount) {
+			qDebug().noquote() << "warning for " << lastSQL << query(QBL("SHOW WARNINGS")) << "\n";
+		}
 	}
 
 	unsigned int error = mysql_errno(conn);
@@ -521,11 +526,11 @@ void SQLLogger::flush() {
 	QDateTime myDateTime = QDateTime::currentDateTime();
 	QString   time       = myDateTime.toString(Qt::ISODateWithMs);
 	file.write(time.toUtf8() + "\n");
-	
-	double query = serverTime / 1E9;
-	double fetch = fetchTime / 1E9;
-	QByteArray buff = "Query: " + QByteArray::number(query,'E',3);
-	file.write(buff.leftJustified(20,' ').append("Fetch: " + QByteArray::number(fetch,'E',3)) + "\n" + sql);
+
+	double     query = serverTime / 1E9;
+	double     fetch = fetchTime / 1E9;
+	QByteArray buff  = "Query: " + QByteArray::number(query, 'E', 3);
+	file.write(buff.leftJustified(20, ' ').append("Fetch: " + QByteArray::number(fetch, 'E', 3)) + "\n" + sql);
 	if (!error.isEmpty()) {
 		file.write(QBL("\nError: ") + error.toUtf8());
 		if (res && !res->isEmpty()) {
