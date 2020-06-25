@@ -43,6 +43,18 @@ QString base64Nullable(const QString& param) {
 	return mayBeBase64(param);
 }
 
+sqlRow DB::queryLine(const QString& sql) const {
+	return queryLine(sql.toUtf8());
+}
+
+sqlRow DB::queryLine(const QByteArray& sql) const {
+	auto res = query(sql);
+	if (res.empty()) {
+		return sqlRow();
+	}
+	return res[0];
+}
+
 sqlResult DB::query(const QString& sql) const {
 	return query(sql.toUtf8());
 }

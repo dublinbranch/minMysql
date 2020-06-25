@@ -82,6 +82,8 @@ struct DB {
 	~DB();
 	st_mysql* connect() const;
 	bool      tryConnect() const;
+	sqlRow queryLine(const QString& sql) const;
+	sqlRow queryLine(const QByteArray& sql) const;
 	sqlResult query(const QString& sql) const;
 	sqlResult query(const QByteArray& sql) const;
 	//This is to be used ONLY in case the query can have deadlock, and internally tries multiple times to insert data

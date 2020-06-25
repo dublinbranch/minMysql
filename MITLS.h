@@ -79,5 +79,7 @@ class mi_tls_repository {
       private:
 	//To avoid problem of this beeing deallocated prematurely, just use a ptr, that will be inited just once
 	inline static int                                            copyCounter = 0;
+	//Key = memory location of the INSTANCE
+	//Value = what you want to store
 	inline static thread_local std::unordered_map<uintptr_t, T>* repository  = nullptr;
 };
