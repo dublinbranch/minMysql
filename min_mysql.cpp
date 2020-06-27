@@ -43,6 +43,10 @@ QString base64Nullable(const QString& param) {
 	return mayBeBase64(param);
 }
 
+sqlRow DB::queryLine(const char* sql) const {
+	return queryLine(QByteArray(sql));
+}
+
 sqlRow DB::queryLine(const QString& sql) const {
 	return queryLine(sql.toUtf8());
 }
@@ -60,6 +64,9 @@ sqlResult DB::query(const QString& sql) const {
 }
 
 sqlResult DB::query(const QByteArray& sql) const {
+	if (sql.isEmpty()) {
+		return sqlResult();
+	}
 	auto conn = getConn();
 	if (conn == nullptr) {
 		throw QSL("This mysql instance is not connected! \n") + QStacker16();
@@ -68,6 +75,19 @@ sqlResult DB::query(const QByteArray& sql) const {
 	lastSQL = sql;
 	SQLLogger sqlLogger(sql, conf.logError);
 	sqlLogger.logSql = conf.logSql;
+
+	//reconnect if needed
+	//TODO this will double the time in case of latency, consider place in a config to enable or not ?
+	if (mysql_ping(conn)) {
+		auto error      = mysql_errno(conn);
+		auto err        = QSL("Mysql error for %1 \nerror was %2 code: %3").arg(QString(sql)).arg(mysql_error(conn)).arg(error);
+		sqlLogger.error = err;
+		//this line is needed for proper email error reporting
+		qWarning().noquote() << err << QStacker16();
+		cxaNoStack = true;
+		throw err;
+	}
+
 	{
 		QElapsedTimer timer;
 		timer.start();
@@ -76,15 +96,14 @@ sqlResult DB::query(const QByteArray& sql) const {
 
 		sqlLogger.serverTime = timer.nsecsElapsed();
 	}
-	auto error = mysql_errno(conn);
-	if (error) {
+	if (auto error = mysql_errno(conn); error) {
 		switch (error) {
 		case 1065:
 			//well an empty query is bad, but not too much!
 			qWarning().noquote() << "empty query (or equivalent for) " << sql << "in" << QStacker16();
 			return sqlResult();
 		}
-		auto err        = QSL("Mysql error for ") + sql.constData() + QSL("\nerror was ") + mysql_error(conn) + QSL(" code: ") + error;
+		auto err        = QSL("Mysql error for %1 \nerror was %2 code: %3").arg(QString(sql)).arg(mysql_error(conn)).arg(error);
 		sqlLogger.error = err;
 		//this line is needed for proper email error reporting
 		qWarning().noquote() << err << QStacker16();
@@ -189,40 +208,43 @@ DB::~DB() {
 
 st_mysql* DB::connect() const {
 	//Mysql connection stuff is not thread safe!
-	static std::mutex           mutex;
-	std::lock_guard<std::mutex> lock(mutex);
-	st_mysql*                   conn = mysql_init(nullptr);
+	{
+		static std::mutex           mutex;
+		std::lock_guard<std::mutex> lock(mutex);
+		st_mysql*                   conn = mysql_init(nullptr);
 
-	my_bool trueNonSense = 1;
-	mysql_options(conn, MYSQL_OPT_RECONNECT, &trueNonSense);
-	//This will enable non blocking capability
-	mysql_options(conn, MYSQL_OPT_NONBLOCK, 0);
-	//sensibly speed things up
-	mysql_options(conn, MYSQL_OPT_COMPRESS, &trueNonSense);
+		my_bool trueNonSense = 1;
+		//looks like is not working very well
+		mysql_options(conn, MYSQL_OPT_RECONNECT, &trueNonSense);
+		//This will enable non blocking capability
+		mysql_options(conn, MYSQL_OPT_NONBLOCK, 0);
+		//sensibly speed things up
+		mysql_options(conn, MYSQL_OPT_COMPRESS, &trueNonSense);
+		//just spam every where to be sure is used
+		mysql_options(conn, MYSQL_SET_CHARSET_NAME, "utf8");
+		if (!conf.caCert.isEmpty()) {
+			mysql_ssl_set(conn, nullptr, nullptr, nullptr, conf.caCert.constData(), nullptr);
+		}
 
-	mysql_options(conn, MYSQL_SET_CHARSET_NAME, "utf8");
-	if (!conf.caCert.isEmpty()) {
-		mysql_ssl_set(conn, nullptr, nullptr, nullptr, conf.caCert.constData(), nullptr);
+		getConf();
+		//For some reason mysql is now complaining of not having a DB selected... just select one and gg
+		auto connected = mysql_real_connect(conn, conf.host, conf.user.constData(), conf.pass.constData(),
+		                                    conf.getDefaultDB(),
+		                                    conf.port, conf.sock.constData(), CLIENT_MULTI_STATEMENTS);
+		if (connected == nullptr) {
+			auto msg = QSL("Mysql connection error (mysql_init). for %1 : %2 ").arg(QString(conf.host)).arg(conf.port) + mysql_error(conn) + QStacker16Light();
+			throw msg;
+		}
+
+		/***/
+		connPool = conn;
+		/***/
 	}
-
-	getConf();
-	//For some reason mysql is now complaining of not having a DB selected... just select one and gg
-	auto connected = mysql_real_connect(conn, conf.host, conf.user.constData(), conf.pass.constData(),
-	                                    conf.getDefaultDB(),
-	                                    conf.port, conf.sock.constData(), CLIENT_MULTI_STATEMENTS);
-	if (connected == nullptr) {
-		auto msg = QSL("Mysql connection error (mysql_init). for %1 : %2 ").arg(QString(conf.host)).arg(conf.port) + mysql_error(conn) + QStacker16Light();
-		throw msg;
-	}
-
-	/***/
-	connPool = conn;
-	/***/
 
 	query(QBL("SET @@SQL_MODE = 'STRICT_TRANS_TABLES,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';"));
 	query(QBL("SET time_zone='UTC'"));
 
-	return conn;
+	return connPool;
 }
 
 bool DB::tryConnect() const {
@@ -292,13 +314,14 @@ void SQLBuffering::flush() {
 	 */
 
 	//This MUST be out of the buffered block!
-	conn->query(QSL("START TRANSACTION;"));
+	conn->query(QBL("START TRANSACTION;"));
 
 	QString query;
+	//TODO just compose the query in utf8, and append in utf8
 	for (auto&& line : buffer) {
 		query.append(line);
 		query.append(QSL("\n"));
-		//this is UTF16, but MySQL run in UTF8, so can be lowet or bigger (rare vey rare but possible)
+		//this is UTF16, but MySQL run in UTF8, so can be lower or bigger (rare vey rare but possible)
 		//small safety margin + increase size for UTF16 -> UTF8 conversion
 		if ((query.size() * 1.3) > maxPacket * 0.75) {
 			conn->queryDeadlockRepeater(query.toUtf8());
@@ -309,7 +332,7 @@ void SQLBuffering::flush() {
 		conn->queryDeadlockRepeater(query.toUtf8());
 	}
 	//This MUST be out of the buffered block!
-	conn->query(QSL("COMMIT;"));
+	conn->query(QBL("COMMIT;"));
 	buffer.clear();
 }
 
@@ -568,3 +591,17 @@ QString nullOnZero(uint v) {
 		return SQL_NULL;
 	}
 }
+/**
+ * to check reconnection
+ * 	while (true) {
+		try {
+			qDebug() << s7Db.queryLine("SELECT NOW(6)");	
+		} catch (...) {
+			qDebug() << "Query error";
+		}
+		
+		usleep(1E5);
+	}
+	
+	exit(1);
+	*/
