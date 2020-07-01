@@ -78,7 +78,18 @@ sqlResult DB::query(const QByteArray& sql) const {
 
 	//reconnect if needed
 	//TODO this will double the time in case of latency, consider place in a config to enable or not ?
-	if (mysql_ping(conn)) {
+	for (int i = 0; i < 5; i++) {
+		if (mysql_ping(conn)) { //1 on error
+			//force reconnection
+			closeConn();
+			conn = getConn();
+		} else {
+			break;
+		}
+	}
+
+	//last ping check
+	if (mysql_ping(conn)) { //1 on error
 		auto error      = mysql_errno(conn);
 		auto err        = QSL("Mysql error for %1 \nerror was %2 code: %3").arg(QString(sql)).arg(mysql_error(conn)).arg(error);
 		sqlLogger.error = err;
@@ -199,6 +210,10 @@ DB::DB(const DBConf& conf) {
 }
 
 DB::~DB() {
+	closeConn();
+}
+
+void DB::closeConn() const {
 	st_mysql* curConn = connPool;
 	if (curConn) {
 		mysql_close(curConn);

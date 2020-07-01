@@ -80,19 +80,20 @@ struct DB {
 	DB() = default;
 	DB(const DBConf& conf);
 	~DB();
+	void      closeConn() const;
 	st_mysql* connect() const;
 	bool      tryConnect() const;
-	sqlRow queryLine(const char* sql) const;
-	sqlRow queryLine(const QString& sql) const;
-	sqlRow queryLine(const QByteArray& sql) const;
-	
+	sqlRow    queryLine(const char* sql) const;
+	sqlRow    queryLine(const QString& sql) const;
+	sqlRow    queryLine(const QByteArray& sql) const;
+
 	sqlResult query(const char* sql) const;
 	sqlResult query(const QString& sql) const;
 	sqlResult query(const QByteArray& sql) const;
 	//This is to be used ONLY in case the query can have deadlock, and internally tries multiple times to insert data
 	sqlResult queryDeadlockRepeater(const QByteArray& sql, uint maxTry = 5) const;
-	
-	bool      isSSL() const;
+
+	bool isSSL() const;
 	/**
 	  Those 2 are used toghether for the ASYNC mode
 	 * @brief startQuery
