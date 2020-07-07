@@ -247,7 +247,7 @@ st_mysql* DB::connect() const {
 		                                    conf.getDefaultDB(),
 		                                    conf.port, conf.sock.constData(), CLIENT_MULTI_STATEMENTS);
 		if (connected == nullptr) {
-			auto msg = QSL("Mysql connection error (mysql_init). for %1 : %2 ").arg(QString(conf.host)).arg(conf.port) + mysql_error(conn) + QStacker16Light();
+			auto msg   = QSL("Mysql connection error (mysql_init). for %1 : %2 ").arg(QString(conf.host)).arg(conf.port) + mysql_error(conn) + QStacker16Light();
 			cxaNoStack = true;
 			throw msg;
 		}
@@ -330,7 +330,9 @@ void SQLBuffering::flush() {
 	 */
 
 	//This MUST be out of the buffered block!
-	conn->query(QBL("START TRANSACTION;"));
+	if (useTRX) {
+		conn->query(QBL("START TRANSACTION;"));
+	}
 
 	QString query;
 	//TODO just compose the query in utf8, and append in utf8
@@ -348,7 +350,9 @@ void SQLBuffering::flush() {
 		conn->queryDeadlockRepeater(query.toUtf8());
 	}
 	//This MUST be out of the buffered block!
-	conn->query(QBL("COMMIT;"));
+	if (useTRX) {
+		conn->query(QBL("COMMIT;"));
+	}
 	buffer.clear();
 }
 
