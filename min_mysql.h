@@ -180,6 +180,7 @@ class SQLBuffering {
 	~SQLBuffering();
 	void append(const QString& sql);
 	void flush();
+	void setUseTRX(bool useTRX);
 };
 
 #endif // MIN_MYSQL_H

@@ -356,6 +356,10 @@ void SQLBuffering::flush() {
 	buffer.clear();
 }
 
+void SQLBuffering::setUseTRX(bool useTRX){
+	this->useTRX = useTRX;
+}
+
 QString Q64(const sqlRow& line, const QByteArray& b) {
 	return base64this(QV(line, b));
 }
