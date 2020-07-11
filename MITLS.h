@@ -1,7 +1,7 @@
 #pragma once
 
-#include <unordered_map>
 #include <stdint.h>
+#include <unordered_map>
 
 // Forward declaration
 template <typename T>
@@ -22,7 +22,7 @@ class mi_tls : protected mi_tls_repository<T> {
 		return *this;
 	}
 
-	T get(){
+	T get() {
 		return this->load(reinterpret_cast<uintptr_t>(this));
 	}
 
@@ -39,48 +39,27 @@ template <typename T>
 class mi_tls_repository {
       protected:
 	void store(uintptr_t instance, T value) {
-		if (!repository) {
-			repository = new std::unordered_map<uintptr_t, T>();
-		}
-		repository->operator[](instance) = value;
+		repository[instance] = value;
 	}
 
-	T load(uintptr_t instance) {
-		if (!repository) {
-			repository = new std::unordered_map<uintptr_t, T>();
-		}
-		return repository->operator[](instance);
+	T load(uintptr_t instance) const {
+		return repository[instance];
 	}
 
 	void remove(uintptr_t instance) {
-		if (!repository) {
-			//already destructed because empty ?
-			return;
-		}
-		if (repository->find(instance) != repository->cend()) {
-			repository->erase(instance);
+		if (repository.find(instance) != repository.cend()) {
+			repository.erase(instance);
 		}
 	}
 
 	mi_tls_repository() {
-		copyCounter++;
-		if (!repository) {
-			repository = new std::unordered_map<uintptr_t, T>();
-		}
 	}
 
 	~mi_tls_repository() {
-		copyCounter--;
-		if (copyCounter == 0) {
-			delete (repository);
-			repository = nullptr;
-		}
 	}
 
       private:
-	//To avoid problem of this beeing deallocated prematurely, just use a ptr, that will be inited just once
-	inline static int                                            copyCounter = 0;
 	//Key = memory location of the INSTANCE
 	//Value = what you want to store
-	inline static thread_local std::unordered_map<uintptr_t, T>* repository  = nullptr;
+	inline static thread_local std::unordered_map<uintptr_t, T> repository;
 };

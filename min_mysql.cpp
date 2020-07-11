@@ -213,6 +213,11 @@ DB::~DB() {
 	closeConn();
 }
 
+/**
+ * @brief DB::closeConn should be called if you know the db instance is been used in a thread (and ofc will not be used anymore)
+ * is not a problem if not done, it will just leave a few warn in the error log likeF
+ * [Warning] Aborted connection XXX to db: 'ZYX' user: '123' host: 'something' (Got an error reading communication packets)
+ */
 void DB::closeConn() const {
 	st_mysql* curConn = connPool;
 	if (curConn) {
@@ -356,7 +361,7 @@ void SQLBuffering::flush() {
 	buffer.clear();
 }
 
-void SQLBuffering::setUseTRX(bool useTRX){
+void SQLBuffering::setUseTRX(bool useTRX) {
 	this->useTRX = useTRX;
 }
 
