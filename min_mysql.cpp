@@ -78,7 +78,8 @@ sqlResult DB::query(const QByteArray& sql) const {
 
 	//reconnect if needed
 	//TODO this will double the time in case of latency, consider place in a config to enable or not ?
-	for (int i = 0; i < 5; i++) {
+	int connRetry = 0;
+	for (; connRetry < 5; connRetry++) {
 		if (mysql_ping(conn)) { //1 on error
 			//force reconnection
 			closeConn();
@@ -91,7 +92,11 @@ sqlResult DB::query(const QByteArray& sql) const {
 	//last ping check
 	if (mysql_ping(conn)) { //1 on error
 		auto error      = mysql_errno(conn);
-		auto err        = QSL("Mysql error for %1 \nerror was %2 code: %3").arg(QString(sql)).arg(mysql_error(conn)).arg(error);
+		auto err        = QSL("Mysql error for %1 \nerror was %2 code: %3, connRetry for %4")
+				.arg(QString(sql))
+				.arg(mysql_error(conn))
+				.arg(error)
+				.arg(connRetry);
 		sqlLogger.error = err;
 		//this line is needed for proper email error reporting
 		qWarning().noquote() << err << QStacker16();
