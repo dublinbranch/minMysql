@@ -72,9 +72,13 @@ sqlResult DB::query(const QByteArray& sql) const {
 		throw QSL("This mysql instance is not connected! \n") + QStacker16();
 	}
 
-	lastSQL = sql;
 	SQLLogger sqlLogger(sql, conf.logError);
-	sqlLogger.logSql = conf.logSql;
+	if (sql != "SHOW WARNINGS") {
+		lastSQL          = sql;
+		sqlLogger.logSql = conf.logSql;
+	} else {
+		sqlLogger.logSql = false;
+	}
 
 	//reconnect if needed
 	//TODO this will double the time in case of latency, consider place in a config to enable or not ?
@@ -429,6 +433,23 @@ bool DB::completedQuery() const {
 	}
 }
 
+sqlResult DB::getWarning(bool useSuppressionList) const {
+	auto res = query(QBL("SHOW WARNINGS"));
+	if (!useSuppressionList || conf.warningSuppression.isEmpty()) {
+		return res;
+	}
+	sqlResult ok;
+	for (auto iter = res.begin(); iter != res.end(); ++iter) {
+		auto msg = iter->value(QBL("Message"), BSQL_NULL);
+		if (conf.warningSuppression.contains(msg)) {
+			//iter = res.erase(iter);
+			continue;
+		}
+		ok.append(*iter);
+	}
+	return res;
+}
+
 sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
 	QElapsedTimer timer;
 	timer.start(); //this will be stopped in the destructor of sql logger
@@ -478,7 +499,10 @@ sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
 	} else {
 		auto warnCount = mysql_warning_count(conn);
 		if (warnCount) {
-			qDebug().noquote() << "warning for " << lastSQL << query(QBL("SHOW WARNINGS")) << "\n";
+			auto warn = this->getWarning(true);
+			if (!warn.isEmpty()) {
+				qDebug().noquote() << "warning for " << lastSQL << warn << "\n";
+			}
 		}
 	}
 

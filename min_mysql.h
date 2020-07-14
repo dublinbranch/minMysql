@@ -54,15 +54,15 @@ struct SQLLogger {
 };
 
 struct DBConf {
-	QByteArray host = "127.0.0.1";
-	QByteArray pass;
-	QByteArray user;
-	QByteArray sock;
-	QByteArray caCert;
-
-	uint port     = 3306;
-	bool logSql   = false;
-	bool logError = false;
+	QByteArray  host = "127.0.0.1";
+	QByteArray  pass;
+	QByteArray  user;
+	QByteArray  sock;
+	QByteArray  caCert;
+	QStringList warningSuppression;
+	uint        port     = 3306;
+	bool        logSql   = false;
+	bool        logError = false;
 
 	QByteArray getDefaultDB() const;
 	void       setDefaultDB(const QByteArray& value);
@@ -114,6 +114,7 @@ struct DB {
 	bool completedQuery() const;
 
 	//Shared by both async and not
+	sqlResult getWarning(bool useSuppressionList = true) const;
 	sqlResult fetchResult(SQLLogger* sqlLogger = nullptr) const;
 	int       fetchAdvanced(FetchVisitor* visitor) const;
 	st_mysql* getConn() const;
