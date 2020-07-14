@@ -434,11 +434,15 @@ bool DB::completedQuery() const {
 }
 
 sqlResult DB::getWarning(bool useSuppressionList) const {
+	sqlResult ok;
+	auto warnCount = mysql_warning_count(getConn());
+	if (!warnCount) {
+		return ok;
+	}
 	auto res = query(QBL("SHOW WARNINGS"));
 	if (!useSuppressionList || conf.warningSuppression.isEmpty()) {
 		return res;
 	}
-	sqlResult ok;
 	for (auto iter = res.begin(); iter != res.end(); ++iter) {
 		auto msg = iter->value(QBL("Message"), BSQL_NULL);
 		if (conf.warningSuppression.contains(msg)) {
@@ -447,7 +451,7 @@ sqlResult DB::getWarning(bool useSuppressionList) const {
 		}
 		ok.append(*iter);
 	}
-	return res;
+	return ok;
 }
 
 sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
@@ -497,12 +501,9 @@ sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
 		//reset
 		skipWarning = false;
 	} else {
-		auto warnCount = mysql_warning_count(conn);
-		if (warnCount) {
-			auto warn = this->getWarning(true);
-			if (!warn.isEmpty()) {
-				qDebug().noquote() << "warning for " << lastSQL << warn << "\n";
-			}
+		auto warn = this->getWarning(true);
+		if (!warn.isEmpty()) {
+			qDebug().noquote() << "warning for " << lastSQL << warn << "\n";
 		}
 	}
 
