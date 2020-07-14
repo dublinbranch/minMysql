@@ -356,7 +356,7 @@ void SQLBuffering::flush() {
 	buffer.clear();
 }
 
-void SQLBuffering::setUseTRX(bool useTRX){
+void SQLBuffering::setUseTRX(bool useTRX) {
 	this->useTRX = useTRX;
 }
 
@@ -424,6 +424,22 @@ bool DB::completedQuery() const {
 	}
 }
 
+sqlResult DB::getWarning(bool useSuppressionList) const {
+	auto res = query(QBL("SHOW WARNINGS"));
+	if (!useSuppressionList || conf.warningSuppression.isEmpty()) {
+		return res;
+	}
+	for (auto iter = res.begin(); iter != res.end();) {
+		auto msg = iter->value(QBL("Message"));
+		if (conf.warningSuppression.contains(msg)) {
+			iter = res.erase(iter);
+			continue;
+		}
+		++iter;
+	}
+	return res;
+}
+
 sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
 	QElapsedTimer timer;
 	timer.start(); //this will be stopped in the destructor of sql logger
@@ -473,7 +489,10 @@ sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
 	} else {
 		auto warnCount = mysql_warning_count(conn);
 		if (warnCount) {
-			qDebug().noquote() << "warning for " << lastSQL << query(QBL("SHOW WARNINGS")) << "\n";
+			auto warn = this->getWarning(true);
+			if (!warn.isEmpty()) {
+				qDebug().noquote() << "warning for " << lastSQL << warn << "\n";
+			}
 		}
 	}
 
