@@ -439,13 +439,14 @@ sqlResult DB::getWarning(bool useSuppressionList) const {
 	if (!useSuppressionList || conf.warningSuppression.isEmpty()) {
 		return res;
 	}
-	for (auto iter = res.begin(); iter != res.end();) {
-		auto msg = iter->value(QBL("Message"));
+	sqlResult ok;
+	for (auto iter = res.begin(); iter != res.end(); ++iter) {
+		auto msg = iter->value(QBL("Message"), BSQL_NULL);
 		if (conf.warningSuppression.contains(msg)) {
-			iter = res.erase(iter);
+			//iter = res.erase(iter);
 			continue;
 		}
-		++iter;
+		ok.append(*iter);
 	}
 	return res;
 }
