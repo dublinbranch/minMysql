@@ -72,9 +72,13 @@ sqlResult DB::query(const QByteArray& sql) const {
 		throw QSL("This mysql instance is not connected! \n") + QStacker16();
 	}
 
-	lastSQL = sql;
 	SQLLogger sqlLogger(sql, conf.logError);
-	sqlLogger.logSql = conf.logSql;
+	if (sql != "SHOW WARNINGS") {
+		lastSQL          = sql;
+		sqlLogger.logSql = conf.logSql;
+	} else {
+		sqlLogger.logSql = false;
+	}
 
 	//reconnect if needed
 	//TODO this will double the time in case of latency, consider place in a config to enable or not ?
