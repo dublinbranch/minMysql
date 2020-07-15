@@ -2,6 +2,7 @@
 #define MIN_MYSQL_H
 
 #include "MITLS.h"
+#include <QRegularExpression>
 #include <QStringList>
 
 #ifndef QBL
@@ -54,15 +55,15 @@ struct SQLLogger {
 };
 
 struct DBConf {
-	QByteArray  host = "127.0.0.1";
-	QByteArray  pass;
-	QByteArray  user;
-	QByteArray  sock;
-	QByteArray  caCert;
-	QStringList warningSuppression;
-	uint        port     = 3306;
-	bool        logSql   = false;
-	bool        logError = false;
+	QByteArray                host = "127.0.0.1";
+	QByteArray                pass;
+	QByteArray                user;
+	QByteArray                sock;
+	QByteArray                caCert;
+	QList<QRegularExpression> warningSuppression;
+	uint                      port     = 3306;
+	bool                      logSql   = false;
+	bool                      logError = false;
 
 	QByteArray getDefaultDB() const;
 	void       setDefaultDB(const QByteArray& value);
@@ -126,9 +127,9 @@ struct DB {
 	DB(const DB&)            = delete;
 
 	//this will require query + fetchAdvanced
-	mutable bool noFetch = false;
+	mutable mi_tls<bool> noFetch = false;
 	//JUST For the next query the WARNING spam will be suppressed, use if you understand what you are doing
-	mutable bool skipWarning = false;
+	mutable mi_tls<bool> skipWarning = false;
 
 	const DBConf getConf() const;
 	void         setConf(const DBConf& value);
@@ -138,7 +139,7 @@ struct DB {
 	DBConf conf;
 	//this allow to spam the DB handler around, and do not worry of thread, each thread will create it's own connection!
 	mutable mi_tls<st_mysql*> connPool;
-	//user for asyncs
+	//used for asyncs
 	mutable mi_tls<int>        signalMask;
 	mutable mi_tls<QByteArray> lastSQL;
 	//The value is not RESETTED if the last query do not use a insert, IE if you do a select after an insert it will still be there!

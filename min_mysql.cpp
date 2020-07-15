@@ -194,6 +194,9 @@ const DBConf DB::getConf() const {
 void DB::setConf(const DBConf& value) {
 	conf    = value;
 	confSet = true;
+	for (auto& rx : conf.warningSuppression) {
+		rx.optimize();
+	}
 }
 
 QByteArray DBConf::getDefaultDB() const {
@@ -435,7 +438,7 @@ bool DB::completedQuery() const {
 
 sqlResult DB::getWarning(bool useSuppressionList) const {
 	sqlResult ok;
-	auto warnCount = mysql_warning_count(getConn());
+	auto      warnCount = mysql_warning_count(getConn());
 	if (!warnCount) {
 		return ok;
 	}
@@ -445,11 +448,14 @@ sqlResult DB::getWarning(bool useSuppressionList) const {
 	}
 	for (auto iter = res.begin(); iter != res.end(); ++iter) {
 		auto msg = iter->value(QBL("Message"), BSQL_NULL);
-		if (conf.warningSuppression.contains(msg)) {
-			//iter = res.erase(iter);
-			continue;
+		for (auto rx : conf.warningSuppression) {
+			auto p = rx.pattern();
+			if (rx.match(msg).hasMatch()) {
+				break;
+			} else {
+				ok.append(*iter);
+			}
 		}
-		ok.append(*iter);
 	}
 	return ok;
 }
