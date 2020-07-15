@@ -142,8 +142,6 @@ struct DB {
 	//used for asyncs
 	mutable mi_tls<int>        signalMask;
 	mutable mi_tls<QByteArray> lastSQL;
-	//The value is not RESETTED if the last query do not use a insert, IE if you do a select after an insert it will still be there!
-	mutable mi_tls<unsigned long long> lastIdval;
 };
 
 typedef char** MYSQL_ROW;
