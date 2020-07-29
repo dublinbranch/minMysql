@@ -72,9 +72,13 @@ sqlResult DB::query(const QByteArray& sql) const {
 		throw QSL("This mysql instance is not connected! \n") + QStacker16();
 	}
 
-	lastSQL = sql;
 	SQLLogger sqlLogger(sql, conf.logError);
-	sqlLogger.logSql = conf.logSql;
+	if (sql != "SHOW WARNINGS") {
+		lastSQL          = sql;
+		sqlLogger.logSql = conf.logSql;
+	} else {
+		sqlLogger.logSql = false;
+	}
 
 	//reconnect if needed
 	//TODO this will double the time in case of latency, consider place in a config to enable or not ?
@@ -159,7 +163,7 @@ sqlResult DB::queryDeadlockRepeater(const QByteArray& sql, uint maxTry) const {
 	return result;
 }
 
-QString QV(const QMap<QByteArray, QByteArray>& line, const QByteArray& b) {
+QString QV(const sqlRow& line, const QByteArray& b) {
 	return line.value(b);
 }
 
@@ -195,6 +199,9 @@ const DBConf DB::getConf() const {
 void DB::setConf(const DBConf& value) {
 	conf    = value;
 	confSet = true;
+	for (auto& rx : conf.warningSuppression) {
+		rx.optimize();
+	}
 }
 
 QByteArray DBConf::getDefaultDB() const {
@@ -435,20 +442,27 @@ bool DB::completedQuery() const {
 }
 
 sqlResult DB::getWarning(bool useSuppressionList) const {
+	sqlResult ok;
+	auto      warnCount = mysql_warning_count(getConn());
+	if (!warnCount) {
+		return ok;
+	}
 	auto res = query(QBL("SHOW WARNINGS"));
 	if (!useSuppressionList || conf.warningSuppression.isEmpty()) {
 		return res;
 	}
-	sqlResult ok;
 	for (auto iter = res.begin(); iter != res.end(); ++iter) {
 		auto msg = iter->value(QBL("Message"), BSQL_NULL);
-		if (conf.warningSuppression.contains(msg)) {
-			//iter = res.erase(iter);
-			continue;
+		for (auto rx : conf.warningSuppression) {
+			auto p = rx.pattern();
+			if (rx.match(msg).hasMatch()) {
+				break;
+			} else {
+				ok.append(*iter);
+			}
 		}
-		ok.append(*iter);
 	}
-	return res;
+	return ok;
 }
 
 sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
@@ -498,12 +512,9 @@ sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
 		//reset
 		skipWarning = false;
 	} else {
-		auto warnCount = mysql_warning_count(conn);
-		if (warnCount) {
-			auto warn = this->getWarning(true);
-			if (!warn.isEmpty()) {
-				qDebug().noquote() << "warning for " << lastSQL << warn << "\n";
-			}
+		auto warn = this->getWarning(true);
+		if (!warn.isEmpty()) {
+			qDebug().noquote() << "warning for " << lastSQL << warn << "\n";
 		}
 	}
 
@@ -515,15 +526,6 @@ sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
 		qWarning().noquote() << "Mysql error for " << lastSQL << "error was " << mysql_error(conn) << " code: " << error << QStacker(3);
 		cxaNoStack = true;
 		throw error;
-	}
-
-	auto curLastId = mysql_insert_id(conn);
-	if (curLastId > 0 && lastIdval != curLastId) {
-		lastIdval = curLastId;
-		sqlRow thisItem;
-		thisItem.insert(QBL("last_id"), QByteArray::number(curLastId));
-		res.push_back(thisItem);
-		return res;
 	}
 
 	return res;

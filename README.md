@@ -9,6 +9,14 @@ mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -u root mysql -p
 
 zypper in libmariadb-devel
 
+
+Just add in .pro
+
+include(minMysql/minMysql.pri)
+
+
+Or 
+
 Link with
 
 LIBS += -lmariadb
