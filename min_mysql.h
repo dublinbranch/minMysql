@@ -33,7 +33,9 @@ QString nullOnZero(uint v);
 
 struct st_mysql;
 struct st_mysql_res;
-using sqlRow    = QMap<QByteArray, QByteArray>;
+
+class sqlRow : public QMap<QByteArray, QByteArray> {
+};
 using sqlResult = QList<sqlRow>;
 
 struct SQLLogger {

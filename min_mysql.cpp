@@ -158,7 +158,7 @@ sqlResult DB::queryDeadlockRepeater(const QByteArray& sql, uint maxTry) const {
 	return result;
 }
 
-QString QV(const QMap<QByteArray, QByteArray>& line, const QByteArray& b) {
+QString QV(const sqlRow& line, const QByteArray& b) {
 	return line.value(b);
 }
 
