@@ -38,14 +38,14 @@ struct st_mysql_res;
 class sqlRow : public QMapV2<QByteArray, QByteArray> {
       public:
 	template <typename D>
-	void get2(const QByteArray& key, D& dest) {
+	void get2(const QByteArray& key, D& dest) const {
 		QByteArray temp;
 		get(key, temp);
 		swap(temp, dest);
 	}
 	//To avoid conversion back and forth QBytearray of the value and the his
 	template <typename D>
-	bool get2(const QByteArray& key, D& dest, const D& def) {
+	bool get2(const QByteArray& key, D& dest, const D& def) const {
 		if (auto v = this->fetch(key); v) {
 			swap(*v.value, dest);
 			return true;
@@ -55,7 +55,7 @@ class sqlRow : public QMapV2<QByteArray, QByteArray> {
 	}
 	
 	template <typename D>
-	D get2(const QByteArray& key) {
+	D get2(const QByteArray& key) const {
 		QByteArray temp;
 		D temp2;
 		get(key, temp);
@@ -65,7 +65,7 @@ class sqlRow : public QMapV2<QByteArray, QByteArray> {
 
       private:
 	template <typename D>
-	void swap(const QByteArray& source, D& dest) {
+	void swap(const QByteArray& source, D& dest) const {
 		if constexpr (std::is_same<D, QString>::value) {
 			dest = QString(source);
 			return;
