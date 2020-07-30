@@ -2,6 +2,7 @@
 #define MIN_MYSQL_H
 
 #include "MITLS.h"
+#include "mapExtensor/qmapV2.h"
 #include <QRegularExpression>
 #include <QStringList>
 
@@ -34,7 +35,52 @@ QString nullOnZero(uint v);
 struct st_mysql;
 struct st_mysql_res;
 
-class sqlRow : public QMap<QByteArray, QByteArray> {
+class sqlRow : public QMapV2<QByteArray, QByteArray> {
+      public:
+	template <typename D>
+	void get2(const QByteArray& key, D& dest) {
+		QByteArray temp;
+		get(key, temp);
+		swap(temp, dest);
+	}
+	//To avoid conversion back and forth QBytearray of the value and the his
+	template <typename D>
+	bool get2(const QByteArray& key, D& dest, const D& def) {
+		auto iter = this->find(key);
+		if (iter == this->end()) {
+			dest = def;
+			return false;
+		} else {
+			throw QString("no key > %1 < and missing default value, what should I do ?").arg(QString(key));
+		}
+		swap(iter.value(),dest);
+		return true;
+	}
+
+      private:
+	template <typename D>
+	void swap(const QByteArray& source, D& dest) {
+		if constexpr (std::is_same<D, QString>::value) {
+			dest = QString(source);
+			return;
+		}
+		if constexpr (std::is_same<D, QByteArray>::value) {
+			dest = source;
+			return;
+		}
+		if constexpr (std::is_floating_point<D>::value) {
+			dest = source.toDouble();
+			return;
+		}
+		if constexpr (std::is_signed<D>::value) {
+			dest = source.toLongLong();
+			return;
+		}
+		if constexpr (std::is_unsigned<D>::value) {
+			dest = source.toULongLong();
+			return;
+		}
+	}
 };
 using sqlResult = QList<sqlRow>;
 

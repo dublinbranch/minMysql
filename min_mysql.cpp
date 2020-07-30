@@ -95,12 +95,12 @@ sqlResult DB::query(const QByteArray& sql) const {
 
 	//last ping check
 	if (mysql_ping(conn)) { //1 on error
-		auto error      = mysql_errno(conn);
-		auto err        = QSL("Mysql error for %1 \nerror was %2 code: %3, connRetry for %4")
-				.arg(QString(sql))
-				.arg(mysql_error(conn))
-				.arg(error)
-				.arg(connRetry);
+		auto error = mysql_errno(conn);
+		auto err   = QSL("Mysql error for %1 \nerror was %2 code: %3, connRetry for %4")
+		               .arg(QString(sql))
+		               .arg(mysql_error(conn))
+		               .arg(error)
+		               .arg(connRetry);
 		sqlLogger.error = err;
 		//this line is needed for proper email error reporting
 		qWarning().noquote() << err << QStacker16();
