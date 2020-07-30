@@ -46,15 +46,21 @@ class sqlRow : public QMapV2<QByteArray, QByteArray> {
 	//To avoid conversion back and forth QBytearray of the value and the his
 	template <typename D>
 	bool get2(const QByteArray& key, D& dest, const D& def) {
-		auto iter = this->find(key);
-		if (iter == this->end()) {
-			dest = def;
-			return false;
-		} else {
-			throw QString("no key > %1 < and missing default value, what should I do ?").arg(QString(key));
+		if (auto v = this->fetch(key); v) {
+			swap(*v.value, dest);
+			return true;
 		}
-		swap(iter.value(),dest);
-		return true;
+		dest = def;
+		return false;
+	}
+	
+	template <typename D>
+	D get2(const QByteArray& key) {
+		QByteArray temp;
+		D temp2;
+		get(key, temp);
+		swap(temp, temp2);
+		return temp2;
 	}
 
       private:
