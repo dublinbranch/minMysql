@@ -9,6 +9,7 @@ mysql_tzinfo_to_sql /usr/share/zoneinfo | mysql -u root mysql -p
 
 zypper in libmariadb-devel
 
+It also now requires git@github.com:dublinbranch/mapExtensor.git
 
 Just add in .pro
 
