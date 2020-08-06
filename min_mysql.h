@@ -45,8 +45,8 @@ class sqlRow : public QMapV2<QByteArray, QByteArray> {
 	}
 
 	template <typename D>
-	void get2(const QByteArray& key, D& dest) const {
-		get2(key, dest);
+	[[deprecated("use rq")]] void get2(const QByteArray& key, D& dest) const {
+		rq(key, dest);
 	}
 	
 	//To avoid conversion back and forth QBytearray of the value and the his
