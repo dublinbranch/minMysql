@@ -1,5 +1,4 @@
-#ifndef MIN_MYSQL_H
-#define MIN_MYSQL_H
+#pragma once
 
 #include "MITLS.h"
 #include "mapExtensor/qmapV2.h"
@@ -53,11 +52,11 @@ class sqlRow : public QMapV2<QByteArray, QByteArray> {
 		dest = def;
 		return false;
 	}
-	
+
 	template <typename D>
 	D get2(const QByteArray& key) const {
 		QByteArray temp;
-		D temp2;
+		D          temp2;
 		get(key, temp);
 		swap(temp, temp2);
 		return temp2;
@@ -148,7 +147,8 @@ struct DB {
 	//This is to be used ONLY in case the query can have deadlock, and internally tries multiple times to insert data
 	sqlResult queryDeadlockRepeater(const QByteArray& sql, uint maxTry = 5) const;
 
-	bool isSSL() const;
+	QString escape(const QString& what) const;
+	bool    isSSL() const;
 	/**
 	  Those 2 are used toghether for the ASYNC mode
 	 * @brief startQuery
@@ -237,4 +237,22 @@ class SQLBuffering {
 	void setUseTRX(bool useTRX);
 };
 
-#endif // MIN_MYSQL_H
+class Runnable {
+      public:
+	//Non copyable
+	Runnable& operator=(const Runnable&) = delete;
+	Runnable(const Runnable&)            = delete;
+	Runnable()                           = default;
+	Runnable(const DBConf& conf);
+	void setConf(const DBConf& conf);
+	/**
+	 * @brief coolDown will check the last time a "key" has been activated
+	 * @param key
+	 * @param time
+	 * @return true: we can run, false: do not run
+	 */
+	bool runnable(const QString& key, qint64 second);
+
+      private:
+	DB db;
+};

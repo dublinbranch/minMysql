@@ -163,6 +163,16 @@ sqlResult DB::queryDeadlockRepeater(const QByteArray& sql, uint maxTry) const {
 	return result;
 }
 
+QString DB::escape(const QString& what) const {
+	auto plain = what.toUtf8();
+	//Ma esiste una lib in C++ per mysql ?
+	char* tStr = new char[plain.size() * 2 + 1];
+	mysql_real_escape_string(getConn(), tStr, plain.constData(), plain.size());
+	auto escaped = QString::fromUtf8(tStr);
+	delete[] tStr;
+	return escaped;
+}
+
 QString QV(const sqlRow& line, const QByteArray& b) {
 	return line.value(b);
 }
@@ -647,6 +657,7 @@ QString nullOnZero(uint v) {
 		return SQL_NULL;
 	}
 }
+
 /**
  * to check reconnection
  * 	while (true) {
@@ -661,3 +672,44 @@ QString nullOnZero(uint v) {
 	
 	exit(1);
 	*/
+
+Runnable::Runnable(const DBConf& conf) {
+	setConf(conf);
+}
+
+void Runnable::setConf(const DBConf& conf) {
+	db.setConf(conf);
+	//this will check if we have the proper table and column available in the selected DB
+	try {
+		auto row = db.queryLine("SELECT id, operationCode FROM runnable ORDER BY lastRun DESC LIMIT 1");
+	} catch (QString e) {
+		QString msg = R"(
+Is probably missing the runnable table in the db %1, create it with
+CREATE TABLE `runnable` (
+	`id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+	`operationCode` varchar(65000) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+	`lastRun` int(10) unsigned NOT NULL,
+	`orario` datetime GENERATED ALWAYS AS (from_unixtime(`lastRun`)) VIRTUAL,
+	PRIMARY KEY (`id`),
+KEY `lastRun` (`lastRun`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+					  )";
+		throw msg.arg(QString(db.getConf().getDefaultDB()));
+	}
+}
+
+bool Runnable::runnable(const QString& key, qint64 second) {
+	static const QString skel = "SELECT id, lastRun FROM runnable WHERE operationCode = %1 ORDER BY lastRun DESC LIMIT 1";
+	auto                 now  = QDateTime::currentSecsSinceEpoch();
+	auto                 sql  = skel.arg(base64this(key));
+	auto                 res  = db.query(sql);
+	if (res.isEmpty() or res.at(0).value("lastRun", BZero).toLongLong() + second < now) {
+		static const QString skel = "INSERT INTO runnable SET operationCode = %1, lastRun = %2";
+		auto                 sql  = skel.arg(base64this(key)).arg(now);
+		db.query(sql);
+
+		return true;
+	} else {
+		return false;
+	}
+}
