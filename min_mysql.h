@@ -37,11 +37,17 @@ struct st_mysql_res;
 class sqlRow : public QMapV2<QByteArray, QByteArray> {
       public:
 	template <typename D>
-	void get2(const QByteArray& key, D& dest) const {
+	void rq(const QByteArray& key, D& dest) const {
 		QByteArray temp;
 		get(key, temp);
 		swap(temp, dest);
 	}
+
+	template <typename D>
+	[[deprecated("use rq")]] void get2(const QByteArray& key, D& dest) const {
+		rq(key, dest);
+	}
+	
 	//To avoid conversion back and forth QBytearray of the value and the his
 	template <typename D>
 	bool get2(const QByteArray& key, D& dest, const D& def) const {
