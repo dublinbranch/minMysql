@@ -47,8 +47,8 @@ class sqlRow : public QMapV2<QByteArray, QByteArray> {
 	[[deprecated("use rq")]] void get2(const QByteArray& key, D& dest) const {
 		rq(key, dest);
 	}
-	
-	//To avoid conversion back and forth QBytearray of the value and the his
+
+	//To avoid conversion back and forth QBytearray of the default value and the his result
 	template <typename D>
 	bool get2(const QByteArray& key, D& dest, const D& def) const {
 		if (auto v = this->fetch(key); v) {
@@ -120,12 +120,12 @@ struct DBConf {
 	QByteArray                sock;
 	QByteArray                caCert;
 	QList<QRegularExpression> warningSuppression;
-	uint                      port     = 3306;
-	bool                      logSql   = false;
-	bool                      logError = false;
-
-	QByteArray getDefaultDB() const;
-	void       setDefaultDB(const QByteArray& value);
+	uint                      port            = 3306;
+	bool                      logSql          = false;
+	bool                      logError        = false;
+	bool                      pingBeforeQuery = true; //So if the connection is broken will be re-established
+	QByteArray                getDefaultDB() const;
+	void                      setDefaultDB(const QByteArray& value);
 
       private:
 	QByteArray defaultDB;
@@ -180,7 +180,6 @@ struct DB {
 	int       fetchAdvanced(FetchVisitor* visitor) const;
 	st_mysql* getConn() const;
 	ulong     lastId() const;
-	long      affectedRows() const;
 
 	//Non copyable
 	DB& operator=(const DB&) = delete;
@@ -194,9 +193,13 @@ struct DB {
 	const DBConf getConf() const;
 	void         setConf(const DBConf& value);
 
-      private:
+	long getAffectedRows() const;
+	
+private:
 	bool   confSet = false;
 	DBConf conf;
+	//Mutable is needed for all of them
+	mutable mi_tls<long> affectedRows;
 	//this allow to spam the DB handler around, and do not worry of thread, each thread will create it's own connection!
 	mutable mi_tls<st_mysql*> connPool;
 	//used for asyncs
@@ -257,7 +260,7 @@ class Runnable {
 	 * @param time
 	 * @return true: we can run, false: do not run
 	 */
-	bool runnable(const QString& key, qint64 second);
+	[[nodiscard]] bool runnable(const QString& key, qint64 second);
 
       private:
 	DB db;

@@ -80,32 +80,33 @@ sqlResult DB::query(const QByteArray& sql) const {
 		sqlLogger.logSql = false;
 	}
 
-	//reconnect if needed
-	//TODO this will double the time in case of latency, consider place in a config to enable or not ?
-	int connRetry = 0;
-	for (; connRetry < 5; connRetry++) {
-		if (mysql_ping(conn)) { //1 on error
-			//force reconnection
-			closeConn();
-			conn = getConn();
-		} else {
-			break;
+	//can be disabled in local host to run a bit faster on laggy connection
+	if (conf.pingBeforeQuery) {
+		int connRetry = 0;
+		//Those will not emit an error, only the last one
+		for (; connRetry < 5; connRetry++) {
+			if (mysql_ping(conn)) { //1 on error
+				//force reconnection
+				closeConn();
+				conn = getConn();
+			} else {
+				break;
+			}
 		}
-	}
-
-	//last ping check
-	if (mysql_ping(conn)) { //1 on error
-		auto error = mysql_errno(conn);
-		auto err   = QSL("Mysql error for %1 \nerror was %2 code: %3, connRetry for %4")
-		               .arg(QString(sql))
-		               .arg(mysql_error(conn))
-		               .arg(error)
-		               .arg(connRetry);
-		sqlLogger.error = err;
-		//this line is needed for proper email error reporting
-		qWarning().noquote() << err << QStacker16();
-		cxaNoStack = true;
-		throw err;
+		//last ping check
+		if (mysql_ping(conn)) { //1 on error
+			auto error = mysql_errno(conn);
+			auto err   = QSL("Mysql error for %1 \nerror was %2 code: %3, connRetry for %4")
+			               .arg(QString(sql))
+			               .arg(mysql_error(conn))
+			               .arg(error)
+			               .arg(connRetry);
+			sqlLogger.error = err;
+			//this line is needed for proper email error reporting
+			qWarning().noquote() << err << QStacker16();
+			cxaNoStack = true;
+			throw err;
+		}
 	}
 
 	{
@@ -190,14 +191,6 @@ ulong DB::lastId() const {
 	return mysql_insert_id(getConn());
 }
 
-/**
- * @brief DB::affectedRows looks broken, it return 1 even if there is nothing inserted o.O
- * @return
- */
-long DB::affectedRows() const {
-	return mysql_affected_rows(getConn());
-}
-
 const DBConf DB::getConf() const {
 	if (!confSet) {
 		cxaNoStack = true;
@@ -212,6 +205,10 @@ void DB::setConf(const DBConf& value) {
 	for (auto& rx : conf.warningSuppression) {
 		rx.optimize();
 	}
+}
+
+long DB::getAffectedRows() const {
+	return affectedRows;
 }
 
 QByteArray DBConf::getDefaultDB() const {
@@ -517,6 +514,8 @@ sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
 	} while (mysql_next_result(conn) == 0);
 	sqlLogger->fetchTime = timer.nsecsElapsed();
 
+	affectedRows = mysql_affected_rows(conn);
+
 	//auto affected  = mysql_affected_rows(conn);
 	if (skipWarning) {
 		//reset
@@ -524,7 +523,8 @@ sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
 	} else {
 		auto warn = this->getWarning(true);
 		if (!warn.isEmpty()) {
-			qDebug().noquote() << "warning for " << lastSQL << warn << "\n";
+			qDebug().noquote() << "warning for " << lastSQL << warn << "\n"
+			                   << QStacker16Light();
 		}
 	}
 
