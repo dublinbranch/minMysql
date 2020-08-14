@@ -194,8 +194,8 @@ struct DB {
 	void         setConf(const DBConf& value);
 
 	long getAffectedRows() const;
-	
-private:
+
+      private:
 	bool   confSet = false;
 	DBConf conf;
 	//Mutable is needed for all of them
@@ -224,15 +224,15 @@ quint64    getId(const sqlResult& res);
  * the queries (manually or automatically)
  */
 class SQLBuffering {
-	DB*         conn = nullptr;
 	QStringList buffer;
-	int         bufferSize = 1000;
 	// https://mariadb.com/kb/en/server-system-variables/#max_allowed_packet in our system is always 16M atm
-	uint maxPacket = 16E6;
+	static const uint maxPacket = 16E6;
 	//Set as false in case we are running inside another TRX
 	bool useTRX = true;
 
       public:
+	DB*  conn       = nullptr;
+	uint bufferSize = 1000;
 	/**
 	 * @brief SQLBuffering
 	 * @param _conn
