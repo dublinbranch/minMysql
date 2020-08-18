@@ -224,15 +224,15 @@ quint64    getId(const sqlResult& res);
  * the queries (manually or automatically)
  */
 class SQLBuffering {
-	QStringList buffer;
 	// https://mariadb.com/kb/en/server-system-variables/#max_allowed_packet in our system is always 16M atm
 	static const uint maxPacket = 16E6;
 	//Set as false in case we are running inside another TRX
 	bool useTRX = true;
 
       public:
-	DB*  conn       = nullptr;
-	uint bufferSize = 1000;
+	DB*         conn       = nullptr;
+	uint        bufferSize = 1000;
+	QStringList buffer;
 	/**
 	 * @brief SQLBuffering
 	 * @param _conn
