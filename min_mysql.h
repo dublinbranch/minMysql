@@ -79,17 +79,17 @@ class sqlRow : public QMapV2<QByteArray, QByteArray> {
 			dest = source;
 			return;
 		}
+		bool ok;
 		if constexpr (std::is_floating_point<D>::value) {
-			dest = source.toDouble();
-			return;
+			dest = source.toDouble(&ok);
+		} else if constexpr (std::is_signed<D>::value) {
+			dest = source.toLongLong(&ok);
+		} else if constexpr (std::is_unsigned<D>::value) {
+			dest = source.toULongLong(&ok);
 		}
-		if constexpr (std::is_signed<D>::value) {
-			dest = source.toLongLong();
-			return;
-		}
-		if constexpr (std::is_unsigned<D>::value) {
-			dest = source.toULongLong();
-			return;
+
+		if (!ok) {
+			throw QSL("Impossible to convert %1 as a number").arg(QString(source));
 		}
 	}
 };
