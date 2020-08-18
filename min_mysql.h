@@ -80,15 +80,22 @@ class sqlRow : public QMapV2<QByteArray, QByteArray> {
 			return;
 		}
 		bool ok;
-		if constexpr (std::is_floating_point<D>::value) {
+		if constexpr (std::is_floating_point_v<D>) {
 			dest = source.toDouble(&ok);
-		} else if constexpr (std::is_signed<D>::value) {
+		} else if constexpr (std::is_signed_v<D>) {
 			dest = source.toLongLong(&ok);
-		} else if constexpr (std::is_unsigned<D>::value) {
+		} else if constexpr (std::is_unsigned_v<D>) {
 			dest = source.toULongLong(&ok);
 		}
 
 		if (!ok) {
+			//last chanche NULL is 0 in case we are numeric right ?
+			if (source == QBL("NULL")) {
+				if constexpr (std::is_arithmetic_v<D>) {
+					dest = 0;
+					return;
+				}
+			}
 			throw QSL("Impossible to convert %1 as a number").arg(QString(source));
 		}
 	}
