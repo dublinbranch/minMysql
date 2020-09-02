@@ -68,6 +68,20 @@ class sqlRow : public QMapV2<QByteArray, QByteArray> {
 		return temp2;
 	}
 
+	//Sooo many time we need a QString back
+	QString g16(const QByteArray& key) const {
+		return get2<QString>(key);
+	}
+
+	//Sooo many time we need a QString back
+	QString g16(const QByteArray& key, const QString def) const {
+		QString val;
+		get2(key, val, def);
+		return val;
+	}
+	//When you can not use operator << 
+	QString serialize() const;
+
       private:
 	template <typename D>
 	void swap(const QByteArray& source, D& dest) const {

@@ -713,3 +713,11 @@ bool Runnable::runnable(const QString& key, qint64 second) {
 		return false;
 	}
 }
+
+QString sqlRow::serialize() const {
+	//Almost free operator << 
+	QString out;
+	QDebug  dbg(&out);
+	dbg << (*this);
+	return out;
+}
