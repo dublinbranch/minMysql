@@ -259,7 +259,7 @@ class SQLBuffering {
 	 * @param _conn
 	 * @param _bufferSize 0 disable auto flushing, 1 disable buffering
 	 */
-	SQLBuffering(DB* _conn, int _bufferSize = 1000);
+	SQLBuffering(DB* _conn, uint _bufferSize = 1000);
 	SQLBuffering() = default;
 	~SQLBuffering();
 	void append(const QString& sql);

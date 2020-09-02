@@ -314,7 +314,7 @@ quint64 getId(const sqlResult& res) {
 	return 0;
 }
 
-SQLBuffering::SQLBuffering(DB* _conn, int _bufferSize) {
+SQLBuffering::SQLBuffering(DB* _conn, uint _bufferSize) {
 	conn       = _conn;
 	bufferSize = _bufferSize;
 }
@@ -329,7 +329,7 @@ void SQLBuffering::append(const QString& sql) {
 		return;
 	}
 	//0 disable flushing, 1 disable buffering
-	if (bufferSize && buffer.size() >= bufferSize) {
+	if (bufferSize && (uint)buffer.size() >= bufferSize) {
 		flush();
 	}
 }
