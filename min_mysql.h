@@ -79,7 +79,7 @@ class sqlRow : public QMapV2<QByteArray, QByteArray> {
 		get2(key, val, def);
 		return val;
 	}
-	//When you can not use operator << 
+	//When you can not use operator <<
 	QString serialize() const;
 
       private:
@@ -228,7 +228,7 @@ struct DB {
 	mutable mi_tls<QByteArray> lastSQL;
 };
 
-typedef char** MYSQL_ROW;
+using MYSQL_ROW = char**;
 class FetchVisitor {
       public:
 	virtual void processLine(MYSQL_ROW row)     = 0;
