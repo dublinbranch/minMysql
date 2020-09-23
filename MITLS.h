@@ -61,20 +61,17 @@ class mi_tls_repository {
 		}
 	}
 
-	//This will be called ONLY for the first thread
+	//This will be called for all constructor
 	mi_tls_repository() {
+		//but only the first in this thread will create the map
 		if (!repository) {
 			repository = new std::unordered_map<uintptr_t, T>();
 		}
 	}
 
-	//again this has no access to all the various thread local storage
-	//TODO add
 	~mi_tls_repository() {
-		if (repository) {
-			delete (repository);
-			repository = nullptr;
-		}
+		//we leak memory! else if we have multiple usage in a single thread, the first one to be destroyed removes also the other (very bad)!
+		//I have no idea if is possible to avoid this problem ATM...
 	}
 
       private:

@@ -116,11 +116,11 @@ class sqlRow : public QMapV2<QByteArray, QByteArray> {
 };
 using sqlResult = QList<sqlRow>;
 
+struct DB;
+struct DBConf;
+
 struct SQLLogger {
-	SQLLogger(const QByteArray& _sql, bool _enabled)
-	    : sql(_sql), logError(_enabled) {
-	}
-	SQLLogger() = default;
+	SQLLogger(const QByteArray& _sql, bool _enabled, const DB *_db);
 	void flush();
 	~SQLLogger();
 
@@ -129,12 +129,16 @@ struct SQLLogger {
 	const QByteArray sql;
 	const sqlResult* res = nullptr;
 	QString          error;
+	//TODO questi due leggili dal conf dell db*
 	bool             logSql   = false;
 	bool             logError = false;
 	bool             flushed  = false;
+	//the invoking class
+	const DB* db = nullptr;
 };
 
 struct DBConf {
+	DBConf();
 	QByteArray                host = "127.0.0.1";
 	QByteArray                pass;
 	QByteArray                user;

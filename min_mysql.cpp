@@ -10,6 +10,7 @@
 #include <memory>
 #include <mutex>
 #include <poll.h>
+#include <unistd.h>
 
 static int somethingHappened(MYSQL* mysql, int status);
 
@@ -72,7 +73,7 @@ sqlResult DB::query(const QByteArray& sql) const {
 		throw QSL("This mysql instance is not connected! \n") + QStacker16();
 	}
 
-	SQLLogger sqlLogger(sql, conf.logError);
+	SQLLogger sqlLogger(sql, conf.logError, this);
 	if (sql != "SHOW WARNINGS") {
 		lastSQL          = sql;
 		sqlLogger.logSql = conf.logSql;
@@ -209,6 +210,9 @@ void DB::setConf(const DBConf& value) {
 
 long DB::getAffectedRows() const {
 	return affectedRows;
+}
+
+DBConf::DBConf() {
 }
 
 QByteArray DBConf::getDefaultDB() const {
@@ -602,6 +606,10 @@ static int somethingHappened(MYSQL* mysql, int status) {
 	}
 }
 
+SQLLogger::SQLLogger(const QByteArray& _sql, bool _enabled, const DB* _db)
+    : sql(_sql), logError(_enabled), db(_db) {
+}
+
 void SQLLogger::flush() {
 	if (flushed) {
 		return;
@@ -628,6 +636,12 @@ void SQLLogger::flush() {
 	QString   time       = myDateTime.toString(Qt::ISODateWithMs);
 	file.write(time.toUtf8() + "\n");
 
+	auto    pid           = getpid();
+	auto    mysqlThreadId = mysql_thread_id(db->getConn());
+	QString info          = QSL("PID: %1, MySQL Thread: %2 \n").arg(pid).arg(mysqlThreadId);
+
+	file.write(info.toUtf8());
+	
 	double     query = serverTime / 1E9;
 	double     fetch = fetchTime / 1E9;
 	QByteArray buff  = "Query: " + QByteArray::number(query, 'E', 3);
@@ -715,7 +729,7 @@ bool Runnable::runnable(const QString& key, qint64 second) {
 }
 
 QString sqlRow::serialize() const {
-	//Almost free operator << 
+	//Almost free operator <<
 	QString out;
 	QDebug  dbg(&out);
 	dbg << (*this);
