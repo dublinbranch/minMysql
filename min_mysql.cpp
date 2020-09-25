@@ -275,7 +275,12 @@ st_mysql* DB::connect() const {
 		                                    conf.getDefaultDB(),
 		                                    conf.port, conf.sock.constData(), CLIENT_MULTI_STATEMENTS);
 		if (connected == nullptr) {
-			auto msg   = QSL("Mysql connection error (mysql_init). for %1 : %2 ").arg(QString(conf.host)).arg(conf.port) + mysql_error(conn) + QStacker16Light();
+			auto msg = QSL("Mysql connection error (mysql_init). for %1 : %2 \n user: %3 \t\t passwd: %4")
+			               .arg(QString(conf.host))
+			               .arg(conf.port)
+			               .arg(conf.user.data())
+			               .arg(conf.pass.data()) +
+			           mysql_error(conn) + QStacker16Light();
 			cxaNoStack = true;
 			throw msg;
 		}
@@ -641,7 +646,7 @@ void SQLLogger::flush() {
 	QString info          = QSL("PID: %1, MySQL Thread: %2 \n").arg(pid).arg(mysqlThreadId);
 
 	file.write(info.toUtf8());
-	
+
 	double     query = serverTime / 1E9;
 	double     fetch = fetchTime / 1E9;
 	QByteArray buff  = "Query: " + QByteArray::number(query, 'E', 3);
