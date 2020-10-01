@@ -81,34 +81,7 @@ sqlResult DB::query(const QByteArray& sql) const {
 		sqlLogger.logSql = false;
 	}
 
-	//can be disabled in local host to run a bit faster on laggy connection
-	if (conf.pingBeforeQuery) {
-		int connRetry = 0;
-		//Those will not emit an error, only the last one
-		for (; connRetry < 5; connRetry++) {
-			if (mysql_ping(conn)) { //1 on error
-				//force reconnection
-				closeConn();
-				conn = getConn();
-			} else {
-				break;
-			}
-		}
-		//last ping check
-		if (mysql_ping(conn)) { //1 on error
-			auto error = mysql_errno(conn);
-			auto err   = QSL("Mysql error for %1 \nerror was %2 code: %3, connRetry for %4")
-			               .arg(QString(sql))
-			               .arg(mysql_error(conn))
-			               .arg(error)
-			               .arg(connRetry);
-			sqlLogger.error = err;
-			//this line is needed for proper email error reporting
-			qWarning().noquote() << err << QStacker16();
-			cxaNoStack = true;
-			throw err;
-		}
-	}
+	pingCheck(conn, sqlLogger);
 
 	{
 		QElapsedTimer timer;
@@ -124,13 +97,36 @@ sqlResult DB::query(const QByteArray& sql) const {
 			//well an empty query is bad, but not too much!
 			qWarning().noquote() << "empty query (or equivalent for) " << sql << "in" << QStacker16();
 			return sqlResult();
+
+		case 2013: { //conn lost
+			//This is sometimes happening, and I really have no idea how to fix, there is already the ping at the beginning, but looks like is not working...
+			//so we try to get some info
+
+			auto err = QSL("Mysql error for %1 \nerror was %2 code: %3, connInfo: %4, \n thread: %5 ")
+			               .arg(QString(sql))
+			               .arg(mysql_error(conn))
+			               .arg(error)
+			               .arg(conf.getInfo())
+			               .arg(mysql_thread_id(conn));
+			sqlLogger.error = err;
+
+			qWarning().noquote() << err << QStacker16();
+
+			//force again reconnection ...
+			closeConn();
+			conn = getConn();
+
+			cxaNoStack = true;
+			throw err;
+		} break;
+		default:
+			auto err        = QSL("Mysql error for %1 \nerror was %2 code: %3").arg(QString(sql)).arg(mysql_error(conn)).arg(error);
+			sqlLogger.error = err;
+			//this line is needed for proper email error reporting
+			qWarning().noquote() << err << QStacker16();
+			cxaNoStack = true;
+			throw err;
 		}
-		auto err        = QSL("Mysql error for %1 \nerror was %2 code: %3").arg(QString(sql)).arg(mysql_error(conn)).arg(error);
-		sqlLogger.error = err;
-		//this line is needed for proper email error reporting
-		qWarning().noquote() << err << QStacker16();
-		cxaNoStack = true;
-		throw err;
 	}
 
 	if (noFetch) {
@@ -163,6 +159,42 @@ sqlResult DB::queryDeadlockRepeater(const QByteArray& sql, uint maxTry) const {
 		throw MyError::deadlock;
 	}
 	return result;
+}
+
+void DB::pingCheck(st_mysql*& conn, SQLLogger& sqlLogger) const {
+	//can be disabled in local host to run a bit faster on laggy connection
+	if (!conf.pingBeforeQuery) {
+		return;
+	}
+	int connRetry = 0;
+	//Those will not emit an error, only the last one
+	for (; connRetry < 5; connRetry++) {
+		if (mysql_ping(conn)) { //1 on error
+			//force reconnection
+			closeConn();
+			conn = getConn();
+		} else {
+			return;
+		}
+	}
+	//last ping check
+	if (mysql_ping(conn)) { //1 on error
+		auto error = mysql_errno(conn);
+		auto err   = QSL("Mysql error for %1 \nerror was %2 code: %3, connRetry for %4, connectionId: %5, conf: ")
+		               .arg(QString(sqlLogger.sql))
+		               .arg(mysql_error(conn))
+		               .arg(error)
+		               .arg(connRetry)
+		               .arg(mysql_error(conn)) +
+		           conf.getInfo() +
+		           QStacker16();
+		sqlLogger.error = err;
+		//this line is needed for proper email error reporting
+		qWarning().noquote() << err;
+		cxaNoStack = true;
+		throw err;
+	}
+	return;
 }
 
 QString DB::escape(const QString& what) const {
@@ -228,6 +260,17 @@ void DBConf::setDefaultDB(const QByteArray& value) {
 	defaultDB = value;
 }
 
+QString DBConf::getInfo(bool passwd) const {
+	auto msg = QSL(" %1:%2  user: %3")
+	               .arg(QString(host))
+	               .arg(port)
+	               .arg(user.data());
+	if (passwd) {
+		msg += pass.data();
+	}
+	return msg;
+}
+
 DB::DB(const DBConf& conf) {
 	setConf(conf);
 }
@@ -275,12 +318,10 @@ st_mysql* DB::connect() const {
 		                                    conf.getDefaultDB(),
 		                                    conf.port, conf.sock.constData(), CLIENT_MULTI_STATEMENTS);
 		if (connected == nullptr) {
-			auto msg = QSL("Mysql connection error (mysql_init). for %1 : %2 \n user: %3 \t\t passwd: %4")
-			               .arg(QString(conf.host))
-			               .arg(conf.port)
-			               .arg(conf.user.data())
-			               .arg(conf.pass.data()) +
-			           mysql_error(conn) + QStacker16Light();
+			auto msg = QSL("Mysql connection error (mysql_init). for %1 \n Error %2")
+			               .arg(conf.getInfo())
+			               .arg(mysql_error(conn)) +
+			           QStacker16Light();
 			cxaNoStack = true;
 			throw msg;
 		}

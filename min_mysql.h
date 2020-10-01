@@ -120,7 +120,7 @@ struct DB;
 struct DBConf;
 
 struct SQLLogger {
-	SQLLogger(const QByteArray& _sql, bool _enabled, const DB *_db);
+	SQLLogger(const QByteArray& _sql, bool _enabled, const DB* _db);
 	void flush();
 	~SQLLogger();
 
@@ -130,9 +130,9 @@ struct SQLLogger {
 	const sqlResult* res = nullptr;
 	QString          error;
 	//TODO questi due leggili dal conf dell db*
-	bool             logSql   = false;
-	bool             logError = false;
-	bool             flushed  = false;
+	bool logSql   = false;
+	bool logError = false;
+	bool flushed  = false;
 	//the invoking class
 	const DB* db = nullptr;
 };
@@ -149,8 +149,11 @@ struct DBConf {
 	bool                      logSql          = false;
 	bool                      logError        = false;
 	bool                      pingBeforeQuery = true; //So if the connection is broken will be re-established
-	QByteArray                getDefaultDB() const;
-	void                      setDefaultDB(const QByteArray& value);
+
+	//Corpus munus
+	QByteArray getDefaultDB() const;
+	void       setDefaultDB(const QByteArray& value);
+	QString    getInfo(bool passwd = false) const;
 
       private:
 	QByteArray defaultDB;
@@ -178,6 +181,7 @@ struct DB {
 	//This is to be used ONLY in case the query can have deadlock, and internally tries multiple times to insert data
 	sqlResult queryDeadlockRepeater(const QByteArray& sql, uint maxTry = 5) const;
 
+	void    pingCheck(st_mysql*& conn, SQLLogger& sqlLogger) const;
 	QString escape(const QString& what) const;
 	bool    isSSL() const;
 	/**
