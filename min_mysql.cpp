@@ -60,6 +60,10 @@ sqlRow DB::queryLine(const QByteArray& sql) const {
 	return res[0];
 }
 
+void DB::setMaxQueryTime(uint time) const {
+	query(QSL("SET @@max_statement_time  = %1").arg(time));
+}
+
 sqlResult DB::query(const QString& sql) const {
 	return query(sql.toUtf8());
 }

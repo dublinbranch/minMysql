@@ -175,6 +175,7 @@ struct DB {
 	sqlRow    queryLine(const QString& sql) const;
 	sqlRow    queryLine(const QByteArray& sql) const;
 
+	void      setMaxQueryTime(uint time) const;
 	sqlResult query(const char* sql) const;
 	sqlResult query(const QString& sql) const;
 	sqlResult query(const QByteArray& sql) const;
