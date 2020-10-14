@@ -93,7 +93,7 @@ class sqlRow : public QMapV2<QByteArray, QByteArray> {
 			dest = source;
 			return;
 		}
-		bool ok;
+		bool ok = false;
 		if constexpr (std::is_floating_point_v<D>) {
 			dest = source.toDouble(&ok);
 		} else if constexpr (std::is_signed_v<D>) {
