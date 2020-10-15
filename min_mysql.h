@@ -274,6 +274,7 @@ class SQLBuffering {
 	void append(const QString& sql);
 	void flush();
 	void setUseTRX(bool useTRX);
+	void clear();
 };
 
 class Runnable {
