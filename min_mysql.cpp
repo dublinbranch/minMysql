@@ -11,6 +11,7 @@
 #include <mutex>
 #include <poll.h>
 #include <unistd.h>
+#include <QRegularExpression>
 
 static int somethingHappened(MYSQL* mysql, int status);
 
