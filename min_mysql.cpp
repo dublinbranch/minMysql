@@ -313,6 +313,20 @@ st_mysql* DB::connect() const {
 		mysql_options(conn, MYSQL_OPT_COMPRESS, &trueNonSense);
 		//just spam every where to be sure is used
 		mysql_options(conn, MYSQL_SET_CHARSET_NAME, "utf8");
+		//Default timeout during connection and operation is Infinite o.O
+		//In a real worild if after 5 sec we still have no conn, is clearly an error!
+		/*
+		uint oldTimeout, readTimeout, writeTimeout;
+		mysql_get_option(conn, MYSQL_OPT_CONNECT_TIMEOUT, &oldTimeout);
+		mysql_get_option(conn, MYSQL_OPT_READ_TIMEOUT, &readTimeout);
+		mysql_get_option(conn, MYSQL_OPT_WRITE_TIMEOUT, &writeTimeout);
+		*/
+
+		uint timeout = 10;
+		mysql_options(conn, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
+		mysql_options(conn, MYSQL_OPT_READ_TIMEOUT, &timeout);
+		mysql_options(conn, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
+
 		if (!conf.caCert.isEmpty()) {
 			mysql_ssl_set(conn, nullptr, nullptr, nullptr, conf.caCert.constData(), nullptr);
 		}
