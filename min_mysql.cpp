@@ -145,18 +145,22 @@ sqlResult DB::query(const QByteArray& sql) const {
 sqlResult DB::queryCache(const QString& sql, bool on, QString name, uint ttl) {
 	mkdir("cachedSQL");
 
+	static std::mutex            lock;
+	std::scoped_lock<std::mutex> scoped(lock);
+
 	if (name.isEmpty()) {
 		name = "cachedSQL/" + sha1(sql);
 	}
 	sqlResult res;
 	if (on) {
-		if(fileUnSerialize(name, res).fileExists){
+		if (fileUnSerialize(name, res).fileExists) {
 			return res;
 		}
 	}
-	
-		res = query(sql);
-	
+
+	lock.unlock();
+	res = query(sql);
+	lock.lock();
 	fileSerialize(name, res);
 	return res;
 }
