@@ -7,11 +7,13 @@
 #include <QElapsedTimer>
 #include <QFile>
 #include <QMap>
+#include <QRegularExpression>
+#include <fileFunction/filefunction.h>
+#include <fileFunction/serialize.h>
 #include <memory>
 #include <mutex>
 #include <poll.h>
 #include <unistd.h>
-#include <QRegularExpression>
 
 static int somethingHappened(MYSQL* mysql, int status);
 
@@ -138,6 +140,25 @@ sqlResult DB::query(const QByteArray& sql) const {
 		return sqlResult();
 	}
 	return fetchResult(&sqlLogger);
+}
+
+sqlResult DB::queryCache(const QString& sql, bool on, QString name, uint ttl) {
+	mkdir("cachedSQL");
+
+	if (name.isEmpty()) {
+		name = "cachedSQL/" + sha1(sql);
+	}
+	sqlResult res;
+	if (on) {
+		if(fileUnSerialize(name, res).fileExists){
+			return res;
+		}
+	}
+	
+		res = query(sql);
+	
+	fileSerialize(name, res);
+	return res;
 }
 
 sqlResult DB::queryDeadlockRepeater(const QByteArray& sql, uint maxTry) const {

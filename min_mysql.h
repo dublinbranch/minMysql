@@ -178,6 +178,9 @@ struct DB {
 	sqlResult query(const char* sql) const;
 	sqlResult query(const QString& sql) const;
 	sqlResult query(const QByteArray& sql) const;
+
+	sqlResult queryCache(const QString& sql, bool on = false, QString name = QString(), uint ttl = 3600);
+
 	//This is to be used ONLY in case the query can have deadlock, and internally tries multiple times to insert data
 	sqlResult queryDeadlockRepeater(const QByteArray& sql, uint maxTry = 5) const;
 
