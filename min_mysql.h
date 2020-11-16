@@ -3,6 +3,7 @@
 #include "MITLS.h"
 #include "mapExtensor/qmapV2.h"
 #include <QStringList>
+#include <QRegularExpression>
 
 #ifndef QBL
 #define QBL(str) QByteArrayLiteral(str)
@@ -135,7 +136,7 @@ struct SQLLogger {
 	//the invoking class
 	const DB* db = nullptr;
 };
-class QRegularExpression;
+//class QRegularExpression;
 struct DBConf {
 	DBConf();
 	QByteArray                host = "127.0.0.1";
