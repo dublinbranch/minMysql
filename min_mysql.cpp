@@ -16,7 +16,21 @@
 #include <poll.h>
 #include <unistd.h>
 
-static int somethingHappened(MYSQL* mysql, int status);
+using namespace std;
+//I (Roy) really do not like reading warning, so we will now properly close all opened connection!
+class ConnPooler {
+      public:
+	void addConnPool(st_mysql* conn);
+	void removeConn(st_mysql* conn);
+	void closeAll();
+
+      private:
+	map<st_mysql*, bool> allConn;
+	mutex                allConnMutex;
+};
+
+static ConnPooler connPooler;
+static int        somethingHappened(MYSQL* mysql, int status);
 
 QString base64this(const char* param) {
 	//no alloc o.O
@@ -331,6 +345,7 @@ void DB::closeConn() const {
 	st_mysql* curConn = connPool;
 	if (curConn) {
 		mysql_close(curConn);
+		connPooler.removeConn(curConn);
 		connPool = nullptr;
 	}
 }
@@ -385,6 +400,7 @@ st_mysql* DB::connect() const {
 
 		/***/
 		connPool = conn;
+		connPooler.addConnPool(conn);
 		/***/
 	}
 
@@ -841,4 +857,28 @@ QString sqlRow::serialize() const {
 	QDebug  dbg(&out);
 	dbg << (*this);
 	return out;
+}
+
+void ConnPooler::addConnPool(st_mysql* conn) {
+	lock_guard<mutex> guard(allConnMutex);
+	allConn.insert({conn, true});
+}
+
+void ConnPooler::removeConn(st_mysql* conn) {
+	lock_guard<mutex> guard(allConnMutex);
+	if (auto iter = allConn.find(conn); iter != allConn.end()) {
+		allConn.erase(iter);
+	}
+}
+
+void ConnPooler::closeAll() {
+	lock_guard<mutex> guard(allConnMutex);
+	for (auto& [conn, dummy] : allConn) {
+		mysql_close(conn);
+	}
+	allConn.clear();
+}
+
+void closeConnectionPool() {
+	connPooler.closeAll();
 }
