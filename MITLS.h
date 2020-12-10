@@ -22,7 +22,7 @@ class mi_tls : protected mi_tls_repository<T> {
 		return *this;
 	}
 
-	T get() {
+	T& get() {
 		return this->load(reinterpret_cast<uintptr_t>(this));
 	}
 
@@ -45,7 +45,7 @@ class mi_tls_repository {
 		repository->operator[](instance) = value;
 	}
 
-	T load(uintptr_t instance) const {
+	T& load(uintptr_t instance) const {
 		if (!repository) { //check if the application has been already terminated, and we have an out of order destruction
 			repository = new std::unordered_map<uintptr_t, T>();
 		}

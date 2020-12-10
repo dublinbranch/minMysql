@@ -8,6 +8,7 @@
 #include <QFile>
 #include <QMap>
 #include <QRegularExpression>
+#include <QScopeGuard>
 #include <fileFunction/filefunction.h>
 #include <fileFunction/serialize.h>
 #include <memory>
@@ -95,7 +96,7 @@ sqlResult DB::query(const QByteArray& sql) const {
 		timer.start();
 
 		mysql_query(conn, sql.constData());
-
+		state.get().queryExecuted++;
 		sqlLogger.serverTime = timer.nsecsElapsed();
 	}
 	if (auto error = mysql_errno(conn); error) {
@@ -109,12 +110,15 @@ sqlResult DB::query(const QByteArray& sql) const {
 			//This is sometimes happening, and I really have no idea how to fix, there is already the ping at the beginning, but looks like is not working...
 			//so we try to get some info
 
-			auto err = QSL("Mysql error for %1 \nerror was %2 code: %3, connInfo: %4, \n thread: %5 ")
+			auto err = QSL("Mysql error for %1 \nerror was %2 code: %3, connInfo: %4, \n thread: %5,"
+			               " queryDone: %6, reconnection %7")
 			               .arg(QString(sql))
 			               .arg(mysql_error(conn))
 			               .arg(error)
 			               .arg(conf.getInfo())
-			               .arg(mysql_thread_id(conn));
+			               .arg(mysql_thread_id(conn))
+			               .arg(state.get().queryExecuted)
+			               .arg(state.get().reconnection);
 			sqlLogger.error = err;
 
 			qWarning().noquote() << err << QStacker16();
@@ -192,6 +196,15 @@ sqlResult DB::queryDeadlockRepeater(const QByteArray& sql, uint maxTry) const {
 }
 
 void DB::pingCheck(st_mysql*& conn, SQLLogger& sqlLogger) const {
+	auto oldConnId = mysql_thread_id(conn);
+
+	auto guard = qScopeGuard([&] {
+		auto newConnId = mysql_thread_id(conn);
+		if (oldConnId != newConnId) {
+			state.get().reconnection++;
+			qDebug() << "detected mysql reconnection";
+		}
+	});
 	//can be disabled in local host to run a bit faster on laggy connection
 	if (!conf.pingBeforeQuery) {
 		return;
@@ -199,7 +212,7 @@ void DB::pingCheck(st_mysql*& conn, SQLLogger& sqlLogger) const {
 	int connRetry = 0;
 	//Those will not emit an error, only the last one
 	for (; connRetry < 5; connRetry++) {
-		if (mysql_ping(conn)) { //1 on error
+		if (mysql_ping(conn)) { //1 on error, which should not even happen ... but here we are
 			//force reconnection
 			closeConn();
 			conn = getConn();
