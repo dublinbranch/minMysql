@@ -16,6 +16,7 @@
 #include <poll.h>
 #include <unistd.h>
 
+DB::SharedState DB::sharedState;
 using namespace std;
 //I (Roy) really do not like reading warning, so we will now properly close all opened connection!
 class ConnPooler {
