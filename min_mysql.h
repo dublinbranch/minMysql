@@ -248,7 +248,7 @@ struct DB {
 	};
 
 	mutable mi_tls<InternalState> state;
-	mutable SharedState           sharedState;
+	static SharedState            sharedState();
 };
 
 using MYSQL_ROW = char**;

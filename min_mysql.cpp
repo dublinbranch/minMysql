@@ -129,7 +129,7 @@ sqlResult DB::query(const QByteArray& sql) const {
 			//so we try to get some info
 
 			auto err = QSL("Mysql error for %1 \nerror was %2 code: %3, connInfo: %4, \n thread: %5,"
-			               " queryDone: %6, reconnection: %7, busyConn: %8, totConn: %9, queryTime: %10")
+			               " queryDone: %6, reconnection: %7, busyConn: %8, totConn: %9, queryTime: %10 (%11)")
 			               .arg(QString(sql))
 			               .arg(mysql_error(conn))
 			               .arg(error)
@@ -139,7 +139,8 @@ sqlResult DB::query(const QByteArray& sql) const {
 			               .arg(state.get().reconnection)
 			               .arg(sharedState.busyConnection)
 			               .arg(connPooler.getPool().size())
-			               .arg((double)sqlLogger.serverTime, 0, 'G', 3);
+			               .arg((double)sqlLogger.serverTime, 0, 'G', 3)
+			               .arg(sqlLogger.serverTime);
 			sqlLogger.error = err;
 
 			qWarning().noquote() << err << QStacker16();
