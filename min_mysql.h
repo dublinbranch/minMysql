@@ -243,7 +243,12 @@ struct DB {
 		uint queryExecuted = 0;
 		uint reconnection  = 0;
 	};
+	struct SharedState {
+		std::atomic<uint> busyConnection = 0;
+	};
+
 	mutable mi_tls<InternalState> state;
+	mutable SharedState           sharedState;
 };
 
 using MYSQL_ROW = char**;

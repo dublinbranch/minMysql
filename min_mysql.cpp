@@ -20,9 +20,10 @@ using namespace std;
 //I (Roy) really do not like reading warning, so we will now properly close all opened connection!
 class ConnPooler {
       public:
-	void addConnPool(st_mysql* conn);
-	void removeConn(st_mysql* conn);
-	void closeAll();
+	void                        addConnPool(st_mysql* conn);
+	void                        removeConn(st_mysql* conn);
+	void                        closeAll();
+	const map<st_mysql*, bool>& getPool() const;
 
       private:
 	map<st_mysql*, bool> allConn;
@@ -109,7 +110,9 @@ sqlResult DB::query(const QByteArray& sql) const {
 		QElapsedTimer timer;
 		timer.start();
 
+		sharedState.busyConnection++;
 		mysql_query(conn, sql.constData());
+		sharedState.busyConnection--;
 		state.get().queryExecuted++;
 		sqlLogger.serverTime = timer.nsecsElapsed();
 	}
@@ -125,14 +128,17 @@ sqlResult DB::query(const QByteArray& sql) const {
 			//so we try to get some info
 
 			auto err = QSL("Mysql error for %1 \nerror was %2 code: %3, connInfo: %4, \n thread: %5,"
-			               " queryDone: %6, reconnection %7")
+			               " queryDone: %6, reconnection: %7, busyConn: %8, totConn: %9, queryTime: %10")
 			               .arg(QString(sql))
 			               .arg(mysql_error(conn))
 			               .arg(error)
 			               .arg(conf.getInfo())
 			               .arg(mysql_thread_id(conn))
 			               .arg(state.get().queryExecuted)
-			               .arg(state.get().reconnection);
+			               .arg(state.get().reconnection)
+			               .arg(sharedState.busyConnection)
+			               .arg(connPooler.getPool().size())
+			               .arg((double)sqlLogger.serverTime, 0, 'G', 3);
 			sqlLogger.error = err;
 
 			qWarning().noquote() << err << QStacker16();
@@ -142,6 +148,7 @@ sqlResult DB::query(const QByteArray& sql) const {
 			conn = getConn();
 
 			cxaNoStack = true;
+			cxaLevel   = CxaLevel::none;
 			throw err;
 		} break;
 		default:
@@ -877,6 +884,10 @@ void ConnPooler::closeAll() {
 		mysql_close(conn);
 	}
 	allConn.clear();
+}
+
+const map<st_mysql*, bool>& ConnPooler::getPool() const {
+	return allConn;
 }
 
 void closeConnectionPool() {
