@@ -387,7 +387,8 @@ st_mysql* DB::connect() const {
 
 		uint timeout = 10;
 		mysql_options(conn, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
-		mysql_options(conn, MYSQL_OPT_READ_TIMEOUT, &timeout);
+		//Else during long query you will have error 2013
+		//mysql_options(conn, MYSQL_OPT_READ_TIMEOUT, &timeout);
 		mysql_options(conn, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
 
 		if (!conf.caCert.isEmpty()) {
