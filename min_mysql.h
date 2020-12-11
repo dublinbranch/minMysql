@@ -310,8 +310,3 @@ class Runnable {
       private:
 	DB db;
 };
-
-/**
- * @brief closeConnectionPool must be called just right before exit
- */
-void closeConnectionPool();

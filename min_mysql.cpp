@@ -24,6 +24,7 @@ class ConnPooler {
 	void                        removeConn(st_mysql* conn);
 	void                        closeAll();
 	const map<st_mysql*, bool>& getPool() const;
+	~ConnPooler();
 
       private:
 	map<st_mysql*, bool> allConn;
@@ -890,6 +891,6 @@ const map<st_mysql*, bool>& ConnPooler::getPool() const {
 	return allConn;
 }
 
-void closeConnectionPool() {
-	connPooler.closeAll();
+ConnPooler::~ConnPooler() {
+	closeAll();
 }
