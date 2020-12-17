@@ -403,10 +403,8 @@ st_mysql* DB::connect() const {
 		if (connected == nullptr) {
 			auto msg = QSL("Mysql connection error (mysql_init). for %1 \n Error %2")
 			               .arg(conf.getInfo())
-			               .arg(mysql_error(conn)) +
-			           QStacker16Light();
-			cxaNoStack = true;
-			throw msg;
+			               .arg(mysql_error(conn));
+			throw DBException(msg, DBException::Error::Connection);
 		}
 
 		/***/
@@ -896,4 +894,14 @@ const map<st_mysql*, bool>& ConnPooler::getPool() const {
 
 ConnPooler::~ConnPooler() {
 	closeAll();
+}
+
+DBException::DBException(const QString& _msg, Error error) {
+	msg       = _msg;
+	msg8      = msg.toUtf8();
+	errorType = error;
+}
+
+const char* DBException::what() const noexcept {
+	return msg8.constData();
 }

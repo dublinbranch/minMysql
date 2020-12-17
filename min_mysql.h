@@ -4,6 +4,7 @@
 #include "mapExtensor/qmapV2.h"
 #include <QRegularExpression>
 #include <QStringList>
+#include <exception>
 
 #ifndef QBL
 #define QBL(str) QByteArrayLiteral(str)
@@ -13,6 +14,21 @@
 enum MyError : unsigned int {
 	noError  = 0,
 	deadlock = 1213
+};
+
+class DBException : public std::exception {
+      public:
+	enum Error : int {
+		NA = 0,
+		Connection,
+		Warning,
+	} errorType = Error::NA;
+	DBException(const QString& _msg, Error error);
+	const char* what() const noexcept override;
+
+      private:
+	QString    msg;
+	QByteArray msg8;
 };
 
 //Those variable are shared in many places, order of initialization is important!
