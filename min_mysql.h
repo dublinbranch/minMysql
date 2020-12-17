@@ -2,8 +2,8 @@
 
 #include "MITLS.h"
 #include "mapExtensor/qmapV2.h"
-#include <QStringList>
 #include <QRegularExpression>
+#include <QStringList>
 
 #ifndef QBL
 #define QBL(str) QByteArrayLiteral(str)
@@ -238,6 +238,17 @@ struct DB {
 	//used for asyncs
 	mutable mi_tls<int>        signalMask;
 	mutable mi_tls<QByteArray> lastSQL;
+	struct InternalState {
+		//This will hopefully help track down the disconnection issue
+		uint queryExecuted = 0;
+		uint reconnection  = 0;
+	};
+	struct SharedState {
+		std::atomic<uint> busyConnection = 0;
+	};
+
+	mutable mi_tls<InternalState> state;
+	static SharedState            sharedState;
 };
 
 using MYSQL_ROW = char**;

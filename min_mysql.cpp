@@ -8,6 +8,7 @@
 #include <QFile>
 #include <QMap>
 #include <QRegularExpression>
+#include <QScopeGuard>
 #include <fileFunction/filefunction.h>
 #include <fileFunction/serialize.h>
 #include <memory>
@@ -15,7 +16,24 @@
 #include <poll.h>
 #include <unistd.h>
 
-static int somethingHappened(MYSQL* mysql, int status);
+DB::SharedState DB::sharedState;
+using namespace std;
+//I (Roy) really do not like reading warning, so we will now properly close all opened connection!
+class ConnPooler {
+      public:
+	void                        addConnPool(st_mysql* conn);
+	void                        removeConn(st_mysql* conn);
+	void                        closeAll();
+	const map<st_mysql*, bool>& getPool() const;
+	~ConnPooler();
+
+      private:
+	map<st_mysql*, bool> allConn;
+	mutex                allConnMutex;
+};
+
+static ConnPooler connPooler;
+static int        somethingHappened(MYSQL* mysql, int status);
 
 QString base64this(const char* param) {
 	//no alloc o.O
@@ -94,8 +112,10 @@ sqlResult DB::query(const QByteArray& sql) const {
 		QElapsedTimer timer;
 		timer.start();
 
+		sharedState.busyConnection++;
 		mysql_query(conn, sql.constData());
-
+		sharedState.busyConnection--;
+		state.get().queryExecuted++;
 		sqlLogger.serverTime = timer.nsecsElapsed();
 	}
 	if (auto error = mysql_errno(conn); error) {
@@ -109,12 +129,19 @@ sqlResult DB::query(const QByteArray& sql) const {
 			//This is sometimes happening, and I really have no idea how to fix, there is already the ping at the beginning, but looks like is not working...
 			//so we try to get some info
 
-			auto err = QSL("Mysql error for %1 \nerror was %2 code: %3, connInfo: %4, \n thread: %5 ")
+			auto err = QSL("Mysql error for %1 \nerror was %2 code: %3, connInfo: %4, \n thread: %5,"
+			               " queryDone: %6, reconnection: %7, busyConn: %8, totConn: %9, queryTime: %10 (%11)")
 			               .arg(QString(sql))
 			               .arg(mysql_error(conn))
 			               .arg(error)
 			               .arg(conf.getInfo())
-			               .arg(mysql_thread_id(conn));
+			               .arg(mysql_thread_id(conn))
+			               .arg(state.get().queryExecuted)
+			               .arg(state.get().reconnection)
+			               .arg(sharedState.busyConnection)
+			               .arg(connPooler.getPool().size())
+			               .arg((double)sqlLogger.serverTime, 0, 'G', 3)
+			               .arg(sqlLogger.serverTime);
 			sqlLogger.error = err;
 
 			qWarning().noquote() << err << QStacker16();
@@ -124,6 +151,7 @@ sqlResult DB::query(const QByteArray& sql) const {
 			conn = getConn();
 
 			cxaNoStack = true;
+			cxaLevel   = CxaLevel::none;
 			throw err;
 		} break;
 		default:
@@ -192,6 +220,15 @@ sqlResult DB::queryDeadlockRepeater(const QByteArray& sql, uint maxTry) const {
 }
 
 void DB::pingCheck(st_mysql*& conn, SQLLogger& sqlLogger) const {
+	auto oldConnId = mysql_thread_id(conn);
+
+	auto guard = qScopeGuard([&] {
+		auto newConnId = mysql_thread_id(conn);
+		if (oldConnId != newConnId) {
+			state.get().reconnection++;
+			qDebug() << "detected mysql reconnection";
+		}
+	});
 	//can be disabled in local host to run a bit faster on laggy connection
 	if (!conf.pingBeforeQuery) {
 		return;
@@ -199,7 +236,7 @@ void DB::pingCheck(st_mysql*& conn, SQLLogger& sqlLogger) const {
 	int connRetry = 0;
 	//Those will not emit an error, only the last one
 	for (; connRetry < 5; connRetry++) {
-		if (mysql_ping(conn)) { //1 on error
+		if (mysql_ping(conn)) { //1 on error, which should not even happen ... but here we are
 			//force reconnection
 			closeConn();
 			conn = getConn();
@@ -318,6 +355,7 @@ void DB::closeConn() const {
 	st_mysql* curConn = connPool;
 	if (curConn) {
 		mysql_close(curConn);
+		connPooler.removeConn(curConn);
 		connPool = nullptr;
 	}
 }
@@ -349,7 +387,8 @@ st_mysql* DB::connect() const {
 
 		uint timeout = 10;
 		mysql_options(conn, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
-		mysql_options(conn, MYSQL_OPT_READ_TIMEOUT, &timeout);
+		//Else during long query you will have error 2013
+		//mysql_options(conn, MYSQL_OPT_READ_TIMEOUT, &timeout);
 		mysql_options(conn, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
 
 		if (!conf.caCert.isEmpty()) {
@@ -372,6 +411,7 @@ st_mysql* DB::connect() const {
 
 		/***/
 		connPool = conn;
+		connPooler.addConnPool(conn);
 		/***/
 	}
 
@@ -828,4 +868,32 @@ QString sqlRow::serialize() const {
 	QDebug  dbg(&out);
 	dbg << (*this);
 	return out;
+}
+
+void ConnPooler::addConnPool(st_mysql* conn) {
+	lock_guard<mutex> guard(allConnMutex);
+	allConn.insert({conn, true});
+}
+
+void ConnPooler::removeConn(st_mysql* conn) {
+	lock_guard<mutex> guard(allConnMutex);
+	if (auto iter = allConn.find(conn); iter != allConn.end()) {
+		allConn.erase(iter);
+	}
+}
+
+void ConnPooler::closeAll() {
+	lock_guard<mutex> guard(allConnMutex);
+	for (auto& [conn, dummy] : allConn) {
+		mysql_close(conn);
+	}
+	allConn.clear();
+}
+
+const map<st_mysql*, bool>& ConnPooler::getPool() const {
+	return allConn;
+}
+
+ConnPooler::~ConnPooler() {
+	closeAll();
 }
