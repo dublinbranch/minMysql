@@ -343,7 +343,8 @@ DB::DB(const DBConf& conf) {
 }
 
 DB::~DB() {
-	closeConn();
+	//will be later removed by the connPooler
+	//closeConn();
 }
 
 /**
@@ -404,6 +405,7 @@ st_mysql* DB::connect() const {
 			auto msg = QSL("Mysql connection error (mysql_init). for %1 \n Error %2")
 			               .arg(conf.getInfo())
 			               .arg(mysql_error(conn));
+			mysql_close(conn);
 			throw DBException(msg, DBException::Error::Connection);
 		}
 
