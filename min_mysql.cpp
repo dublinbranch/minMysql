@@ -898,12 +898,7 @@ ConnPooler::~ConnPooler() {
 	closeAll();
 }
 
-DBException::DBException(const QString& _msg, Error error) {
-	msg       = _msg;
-	msg8      = msg.toUtf8();
+DBException::DBException(const QString& _msg, Error error)
+    : ExceptionV2(_msg) {
 	errorType = error;
-}
-
-const char* DBException::what() const noexcept {
-	return msg8.constData();
 }
