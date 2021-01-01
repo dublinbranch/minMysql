@@ -22,6 +22,7 @@ class DBException : public ExceptionV2 {
 		NA = 0,
 		Connection,
 		Warning,
+		SchemaError
 	} errorType = Error::NA;
 	DBException(const QString& _msg, Error error);
 };
