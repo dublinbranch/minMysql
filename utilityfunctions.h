@@ -2,8 +2,16 @@
 #define UTILITYFUNCTIONS_H
 
 #include "min_mysql.h"
+class DBDebugger : public DB {
+      public:
+	DBDebugger() = default;
+	DBDebugger(const DBConf& conf);
 
-sqlResult getSqlProcessList(DB& db);
+	sqlResult getRunningQueries();
+	sqlResult getProcessList();
+};
+
+sqlResult filterRunningQueries(const sqlResult& sqlProcessList);
 QString   queryEssay(const sqlRow& row, bool brief);
 QString   queryEssay(const sqlResult& res, bool brief);
 
