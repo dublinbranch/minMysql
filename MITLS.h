@@ -72,11 +72,10 @@ class mi_tls_repository {
 	~mi_tls_repository() {
 		//Stuff allocated by thread can not be automatically cleaned up as the destruction order can be wrong and so we loose access to the internal stuff
 		//Thus is impossible to close the inner content
-		if (repository) {
-			repository->clear();
-			delete (repository);
-			repository = nullptr;
-		}
+
+		//In addition FIRST one in the thread to deallocate trigger this function, thus breaking all the other
+		
+		//So STOP wasting time to save a 10Byte memleak, and go figure a better overall logic
 	}
 
       private:
