@@ -70,14 +70,21 @@ class mi_tls_repository {
 	}
 
 	~mi_tls_repository() {
-		//we leak memory! else if we have multiple usage in a single thread, the first one to be destroyed removes also the other (very bad)!
-		//I have no idea if is possible to avoid this problem ATM...
+		//Stuff allocated by thread can not be automatically cleaned up as the destruction order can be wrong and so we loose access to the internal stuff
+		//Thus is impossible to close the inner content
+		if (repository) {
+			repository->clear();
+			delete (repository);
+			repository = nullptr;
+		}
 	}
 
       private:
 	//Key = memory location of the INSTANCE
 	//Value = what you want to store
-	//This is manual because thread_local are auto freed, but free order can be wrong! so when the DB closes (and remove the conn) we are in the wrong place
+	//This is manual because thread_local are auto freed, but free order can be wrong (and usually __call_tls_dtors are called before the at_exit handler)! so when the DB closes (and remove the conn) we are in the wrong place
 	//Therefore this will leak memory, once you close the program, so is 100% irrelevant
+
+	//We should create another pool managed by us, but is nowhere relavant, as long as you do not create a milion thread...
 	inline static thread_local std::unordered_map<uintptr_t, T>* repository = nullptr;
 };

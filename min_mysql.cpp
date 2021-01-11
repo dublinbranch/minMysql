@@ -27,6 +27,8 @@ class ConnPooler {
 	const map<st_mysql*, bool>& getPool() const;
 	~ConnPooler();
 
+	ulong active = 0xBADF00DBADC0FFEE;
+
       private:
 	map<st_mysql*, bool> allConn;
 	mutex                allConnMutex;
@@ -344,7 +346,7 @@ DB::DB(const DBConf& conf) {
 
 DB::~DB() {
 	//will be later removed by the connPooler
-	//closeConn();
+	closeConn();
 }
 
 /**
@@ -355,8 +357,12 @@ DB::~DB() {
 void DB::closeConn() const {
 	st_mysql* curConn = connPool;
 	if (curConn) {
-		mysql_close(curConn);
-		connPooler.removeConn(curConn);
+		//this whole conn pool architecture is wrong, ditch it and recreate something and do not realy on magic constant
+		//to detect if something is freed or not
+		if (connPooler.active == 0xBADF00DBADC0FFEE) {
+			connPooler.removeConn(curConn);
+			mysql_close(curConn);
+		}
 		connPool = nullptr;
 	}
 }
@@ -895,6 +901,7 @@ const map<st_mysql*, bool>& ConnPooler::getPool() const {
 }
 
 ConnPooler::~ConnPooler() {
+	active = 0;
 	closeAll();
 }
 
