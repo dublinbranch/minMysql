@@ -27,7 +27,13 @@ KEY `lastRun` (`lastRun`)
 }
 
 QByteArray TTLCache::get(const QString& key) const {
+	(void)key;
+	return QByteArray();
 }
 
 bool TTLCache::set(const QString& key, uint ttl, const QByteArray& payload) {
+	(void)key;
+	(void)ttl;
+	(void)payload;
+	return true;
 }
