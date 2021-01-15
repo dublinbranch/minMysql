@@ -412,6 +412,7 @@ st_mysql* DB::connect() const {
 			               .arg(conf.getInfo())
 			               .arg(mysql_error(conn));
 			mysql_close(conn);
+			messanger(msg, conf.connErrorVerbosity);
 			throw DBException(msg, DBException::Error::Connection);
 		}
 
