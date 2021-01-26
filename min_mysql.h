@@ -3,6 +3,7 @@
 #include "MITLS.h"
 #include "QStacker/qstacker.h"
 #include "mapExtensor/qmapV2.h"
+#include <QDateTime>
 #include <QRegularExpression>
 #include <QStringList>
 
@@ -53,6 +54,11 @@ class sqlRow : public QMapV2<QByteArray, QByteArray> {
 		QByteArray temp;
 		get(key, temp);
 		swap(temp, dest);
+	}
+
+	QDateTime asDateTime(const QByteArray& key) const {
+		auto time = get2<QString>(key);
+		return QDateTime::fromString(mysqlDateTimeFormat);
 	}
 
 	template <typename D>
@@ -195,6 +201,7 @@ struct DB {
 	sqlResult query(const QByteArray& sql) const;
 
 	sqlResult queryCache(const QString& sql, bool on = false, QString name = QString(), uint ttl = 3600);
+	sqlRow    queryCacheLine(const QString& sql, bool on = false, QString name = QString(), uint ttl = 3600);
 
 	//This is to be used ONLY in case the query can have deadlock, and internally tries multiple times to insert data
 	sqlResult queryDeadlockRepeater(const QByteArray& sql, uint maxTry = 5) const;

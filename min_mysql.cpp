@@ -195,6 +195,17 @@ sqlResult DB::queryCache(const QString& sql, bool on, QString name, uint ttl) {
 	return res;
 }
 
+sqlRow DB::queryCacheLine(const QString& sql, bool on, QString name, uint ttl) {
+	auto res = queryCache(sql, on, name, ttl);
+	if (auto r = res.size(); r > 1) {
+		throw ExceptionV2(QSL("invalid number of row, expected 1, got").arg(r));
+	} else if (r == 1) {
+		return res[0];
+	} else {
+		return {};
+	}
+}
+
 sqlResult DB::queryDeadlockRepeater(const QByteArray& sql, uint maxTry) const {
 	sqlResult result;
 	if (!sql.isEmpty()) {
