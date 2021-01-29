@@ -183,7 +183,7 @@ sqlResult DB::queryCache(const QString& sql, bool on, QString name, uint ttl) {
 	}
 	sqlResult res;
 	if (on) {
-		if (fileUnSerialize(name, res).fileExists) {
+		if (auto file = fileUnSerialize(name, res, ttl); file.valid) {
 			return res;
 		}
 	}
