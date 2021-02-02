@@ -195,6 +195,10 @@ sqlResult DB::queryCache(const QString& sql, bool on, QString name, uint ttl) {
 	return res;
 }
 
+sqlResult DB::queryCache2(const QString& sql, uint ttl) {
+	return queryCache(sql, true, QString(), ttl);
+}
+
 sqlResult DB::queryDeadlockRepeater(const QByteArray& sql, uint maxTry) const {
 	sqlResult result;
 	if (!sql.isEmpty()) {
