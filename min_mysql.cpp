@@ -173,7 +173,9 @@ sqlResult DB::query(const QByteArray& sql) const {
 }
 
 sqlResult DB::queryCache(const QString& sql, bool on, QString name, uint ttl) {
-	mkdir("cachedSQL");
+	//small trick to avoid calling over and over the function
+	static bool fraud = mkdir("cachedSQL");
+	(void)fraud;
 
 	static std::mutex            lock;
 	std::scoped_lock<std::mutex> scoped(lock);
