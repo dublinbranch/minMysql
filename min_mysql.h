@@ -112,6 +112,12 @@ class sqlRow : public QMapV2<QByteArray, QByteArray> {
 		} else if constexpr (std::is_same<D, std::string>::value) {
 			dest = source.toStdString();
 			return;
+		} else if constexpr (std::is_same<D, QDate>::value) {
+			dest = QDate::fromString(mysqlDateFormat, source);
+			return;
+		} else if constexpr (std::is_same<D, QDateTime>::value) {
+			dest = QDateTime::fromString(mysqlDateTimeFormat, source);
+			return;
 		} else if constexpr (std::is_arithmetic_v<D>) {
 			bool ok = false;
 			if constexpr (std::is_floating_point_v<D>) {
