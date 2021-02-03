@@ -106,29 +106,37 @@ class sqlRow : public QMapV2<QByteArray, QByteArray> {
 		if constexpr (std::is_same<D, QString>::value) {
 			dest = QString(source);
 			return;
-		}
-		if constexpr (std::is_same<D, QByteArray>::value) {
+		} else if constexpr (std::is_same<D, QByteArray>::value) {
 			dest = source;
 			return;
-		}
-		bool ok = false;
-		if constexpr (std::is_floating_point_v<D>) {
-			dest = source.toDouble(&ok);
-		} else if constexpr (std::is_signed_v<D>) {
-			dest = source.toLongLong(&ok);
-		} else if constexpr (std::is_unsigned_v<D>) {
-			dest = source.toULongLong(&ok);
-		}
-
-		if (!ok) {
-			//last chanche NULL is 0 in case we are numeric right ?
-			if (source == QBL("NULL")) {
-				if constexpr (std::is_arithmetic_v<D>) {
-					dest = 0;
-					return;
-				}
+		} else if constexpr (std::is_same<D, std::string>::value) {
+			dest = source.toStdString();
+			return;
+		} else if constexpr (std::is_arithmetic_v<D>) {
+			bool ok = false;
+			if constexpr (std::is_floating_point_v<D>) {
+				dest = source.toDouble(&ok);
+			} else if constexpr (std::is_signed_v<D>) {
+				dest = source.toLongLong(&ok);
+			} else if constexpr (std::is_unsigned_v<D>) {
+				dest = source.toULongLong(&ok);
 			}
-			throw QSL("Impossible to convert %1 as a number").arg(QString(source));
+			if (!ok) {
+				//last chanche NULL is 0 in case we are numeric right ?
+				if (source == QBL("NULL")) {
+					if constexpr (std::is_arithmetic_v<D>) {
+						dest = 0;
+						return;
+					}
+				}
+				throw QSL("Impossible to convert %1 as a number").arg(QString(source));
+			}
+		} else {
+			//poor man static assert that will also print for which type it failed
+			typedef typename D::something_made_up X;
+
+			X y;     //To avoid complain that X is defined but not used
+			(void)y; //TO avoid complain that y is unused
 		}
 	}
 };
