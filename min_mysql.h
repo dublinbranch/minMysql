@@ -113,10 +113,10 @@ class sqlRow : public QMapV2<QByteArray, QByteArray> {
 			dest = source.toStdString();
 			return;
 		} else if constexpr (std::is_same<D, QDate>::value) {
-			dest = QDate::fromString(mysqlDateFormat, source);
+			dest = QDate::fromString(source, mysqlDateFormat);
 			return;
 		} else if constexpr (std::is_same<D, QDateTime>::value) {
-			dest = QDateTime::fromString(mysqlDateTimeFormat, source);
+			dest = QDateTime::fromString(source, mysqlDateTimeFormat);
 			return;
 		} else if constexpr (std::is_arithmetic_v<D>) {
 			bool ok = false;
