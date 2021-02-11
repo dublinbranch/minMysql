@@ -59,7 +59,7 @@ class sqlRow : public QMapV2<QByteArray, QByteArray> {
 
 	QDateTime asDateTime(const QByteArray& key) const {
 		auto time = get2<QString>(key);
-		return QDateTime::fromString(mysqlDateTimeFormat);
+		return QDateTime::fromString(time, mysqlDateTimeFormat);
 	}
 
 	template <typename D>
