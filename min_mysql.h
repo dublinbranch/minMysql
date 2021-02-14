@@ -23,7 +23,8 @@ class DBException : public ExceptionV2 {
 		NA = 0,
 		Connection,
 		Warning,
-		SchemaError
+		SchemaError,
+		NoResult
 	} errorType = Error::NA;
 	DBException(const QString& _msg, Error error);
 };
@@ -58,7 +59,7 @@ class sqlRow : public QMapV2<QByteArray, QByteArray> {
 
 	QDateTime asDateTime(const QByteArray& key) const {
 		auto time = get2<QString>(key);
-		return QDateTime::fromString(mysqlDateTimeFormat);
+		return QDateTime::fromString(time, mysqlDateTimeFormat);
 	}
 
 	template <typename D>
@@ -215,7 +216,9 @@ struct DB {
 	sqlResult query(const QByteArray& sql) const;
 
 	sqlResult queryCache(const QString& sql, bool on = false, QString name = QString(), uint ttl = 3600);
-	sqlRow    queryCacheLine(const QString& sql, bool on = false, QString name = QString(), uint ttl = 3600);
+	sqlRow    queryCacheLine(const QString& sql, bool on = false, QString name = QString(), uint ttl = 3600, bool required = false);
+
+	sqlRow    queryCacheLine(const QString& sql, uint ttl = 3600, bool required = false);
 	sqlResult queryCache2(const QString& sql, uint ttl);
 
 	//This is to be used ONLY in case the query can have deadlock, and internally tries multiple times to insert data

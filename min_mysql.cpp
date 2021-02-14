@@ -201,15 +201,23 @@ sqlResult DB::queryCache(const QString& sql, bool on, QString name, uint ttl) {
 	}
 }
 
-sqlRow DB::queryCacheLine(const QString& sql, bool on, QString name, uint ttl) {
+sqlRow DB::queryCacheLine(const QString& sql, bool on, QString name, uint ttl, bool required) {
 	auto res = queryCache(sql, on, name, ttl);
 	if (auto r = res.size(); r > 1) {
 		throw ExceptionV2(QSL("invalid number of row, expected 1, got").arg(r));
 	} else if (r == 1) {
 		return res[0];
 	} else {
-		return {};
+		if (required) {
+			throw DBException("no result for " + sql, DBException::NoResult);
+		} else {
+			return {};
+		}
 	}
+}
+
+sqlRow DB::queryCacheLine(const QString& sql, uint ttl, bool required) {
+	return queryCacheLine(sql, ttl, QString(), ttl, required);
 }
 
 sqlResult DB::queryCache2(const QString& sql, uint ttl) {
