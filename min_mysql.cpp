@@ -173,28 +173,32 @@ sqlResult DB::query(const QByteArray& sql) const {
 }
 
 sqlResult DB::queryCache(const QString& sql, bool on, QString name, uint ttl) {
-	//small trick to avoid calling over and over the function
-	static bool fraud = mkdir("cachedSQL");
-	(void)fraud;
+	if (ttl) {
+		//small trick to avoid calling over and over the function
+		static bool fraud = mkdir("cachedSQL");
+		(void)fraud;
 
-	static std::mutex            lock;
-	std::scoped_lock<std::mutex> scoped(lock);
+		static std::mutex            lock;
+		std::scoped_lock<std::mutex> scoped(lock);
 
-	if (name.isEmpty()) {
-		name = "cachedSQL/" + sha1(sql);
-	}
-	sqlResult res;
-	if (on) {
-		if (auto file = fileUnSerialize(name, res, ttl); file.valid) {
-			return res;
+		if (name.isEmpty()) {
+			name = "cachedSQL/" + sha1(sql);
 		}
-	}
+		sqlResult res;
+		if (on) {
+			if (auto file = fileUnSerialize(name, res, ttl); file.valid) {
+				return res;
+			}
+		}
 
-	lock.unlock();
-	res = query(sql);
-	lock.lock();
-	fileSerialize(name, res);
-	return res;
+		lock.unlock();
+		res = query(sql);
+		lock.lock();
+		fileSerialize(name, res);
+		return res;
+	} else {
+		return query(sql);
+	}
 }
 
 sqlRow DB::queryCacheLine(const QString& sql, bool on, QString name, uint ttl) {
