@@ -412,6 +412,11 @@ st_mysql* DB::connect() const {
 		mysql_options(conn, MYSQL_OPT_COMPRESS, &trueNonSense);
 		//just spam every where to be sure is used
 		mysql_options(conn, MYSQL_SET_CHARSET_NAME, "utf8");
+
+		my_bool falseNonSense = 0;
+
+		mysql_options(conn, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &falseNonSense);
+
 		//Default timeout during connection and operation is Infinite o.O
 		//In a real worild if after 5 sec we still have no conn, is clearly an error!
 		/*
@@ -432,8 +437,10 @@ st_mysql* DB::connect() const {
 
 		auto flag = CLIENT_MULTI_STATEMENTS;
 		if (conf.ssl) {
+			mysql_options(conn, MYSQL_OPT_SSL_ENFORCE, &trueNonSense);
 			flag |= CLIENT_SSL;
 		}
+
 		//For some reason mysql is now complaining of not having a DB selected... just select one and gg
 		auto connected = mysql_real_connect(conn, conf.host, conf.user.constData(), conf.pass.constData(),
 		                                    conf.getDefaultDB(),
