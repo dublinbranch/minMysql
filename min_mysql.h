@@ -177,7 +177,7 @@ struct DBConf {
 	QByteArray                pass;
 	QByteArray                user;
 	QByteArray                sock;
-	QByteArray                caCert;
+	bool                      ssl = false;
 	QList<QRegularExpression> warningSuppression;
 	uint                      port            = 3306;
 	bool                      logSql          = false;

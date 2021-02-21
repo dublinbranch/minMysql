@@ -418,6 +418,11 @@ st_mysql* DB::connect() const {
 		mysql_options(conn, MYSQL_OPT_COMPRESS, &trueNonSense);
 		//just spam every where to be sure is used
 		mysql_options(conn, MYSQL_SET_CHARSET_NAME, "utf8");
+
+		my_bool falseNonSense = 0;
+
+		mysql_options(conn, MYSQL_OPT_SSL_VERIFY_SERVER_CERT, &falseNonSense);
+
 		//Default timeout during connection and operation is Infinite o.O
 		//In a real worild if after 5 sec we still have no conn, is clearly an error!
 		/*
@@ -433,15 +438,19 @@ st_mysql* DB::connect() const {
 		//mysql_options(conn, MYSQL_OPT_READ_TIMEOUT, &timeout);
 		mysql_options(conn, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
 
-		if (!conf.caCert.isEmpty()) {
-			mysql_ssl_set(conn, nullptr, nullptr, nullptr, conf.caCert.constData(), nullptr);
+		//just to check we have the conf set
+		getConf();
+
+		auto flag = CLIENT_MULTI_STATEMENTS;
+		if (conf.ssl) {
+			mysql_options(conn, MYSQL_OPT_SSL_ENFORCE, &trueNonSense);
+			flag |= CLIENT_SSL;
 		}
 
-		getConf();
 		//For some reason mysql is now complaining of not having a DB selected... just select one and gg
 		auto connected = mysql_real_connect(conn, conf.host, conf.user.constData(), conf.pass.constData(),
 		                                    conf.getDefaultDB(),
-		                                    conf.port, conf.sock.constData(), CLIENT_MULTI_STATEMENTS);
+		                                    conf.port, conf.sock.constData(), flag);
 		if (connected == nullptr) {
 			auto msg = QSL("Mysql connection error (mysql_init). for %1 \n Error %2")
 			               .arg(conf.getInfo())
