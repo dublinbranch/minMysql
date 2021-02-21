@@ -53,6 +53,12 @@ QString base64this(const QString& param) {
 	return QBL("FROM_BASE64('") + a + QBL("')");
 }
 
+QString base64this(const string& param) {
+	QByteArray cheap;
+	cheap.setRawData(param.data(), param.size());
+	return base64this(cheap);
+}
+
 QString mayBeBase64(const QString& original) {
 	if (original == SQL_NULL) {
 		return original;

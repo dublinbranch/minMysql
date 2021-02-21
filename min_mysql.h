@@ -41,6 +41,7 @@ inline const QString    Zero                = "0";
 QString base64this(const char* param);
 QString base64this(const QByteArray& param);
 QString base64this(const QString& param);
+QString base64this(const std::string& param);
 QString mayBeBase64(const QString& original);
 QString base64Nullable(const QString& param);
 QString nullOnZero(uint v);
