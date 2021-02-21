@@ -2,6 +2,7 @@
 
 #include "MITLS.h"
 #include "QStacker/qstacker.h"
+#include "const.h"
 #include "mapExtensor/qmapV2.h"
 #include <QDateTime>
 #include <QRegularExpression>
@@ -28,15 +29,6 @@ class DBException : public ExceptionV2 {
 	} errorType = Error::NA;
 	DBException(const QString& _msg, Error error);
 };
-
-//Those variable are shared in many places, order of initialization is important!
-//Inline will avoid to have multiple copy, and enforces having a single one
-inline const QString    mysqlDateFormat     = "yyyy-MM-dd";
-inline const QString    mysqlDateTimeFormat = "yyyy-MM-dd HH:mm:ss";
-inline const QString    SQL_NULL            = "NULL";
-inline const QByteArray BSQL_NULL           = "NULL";
-inline const QByteArray BZero               = "0";
-inline const QString    Zero                = "0";
 
 QString base64this(const char* param);
 QString base64this(const QByteArray& param);

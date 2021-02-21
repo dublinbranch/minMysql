@@ -2,6 +2,7 @@ LIBS += -lmariadb
 
 HEADERS += \
 	$$PWD/MITLS.h \
+	$$PWD/const.h \
     $$PWD/min_mysql.h  \
     $$PWD/ttlcache.h \
 	$$PWD/utilityfunctions.h
