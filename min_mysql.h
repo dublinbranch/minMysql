@@ -3,6 +3,7 @@
 #include "MITLS.h"
 #include "QStacker/qstacker.h"
 #include "const.h"
+#include "magicEnum/magic_from_string.hpp"
 #include "mapExtensor/qmapV2.h"
 #include <QDateTime>
 #include <QRegularExpression>
@@ -111,6 +112,10 @@ class sqlRow : public QMapV2<QByteArray, QByteArray> {
 			return;
 		} else if constexpr (std::is_same<D, QDateTime>::value) {
 			dest = QDateTime::fromString(source, mysqlDateTimeFormat);
+			return;
+		} else if constexpr (std::is_enum_v<D>) {
+			auto s = source.toStdString();
+			magic_enum::fromString(s, dest);
 			return;
 		} else if constexpr (std::is_arithmetic_v<D>) {
 			bool ok = false;
