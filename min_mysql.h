@@ -35,8 +35,8 @@ QString base64this(const char* param);
 QString base64this(const QByteArray& param);
 QString base64this(const QString& param);
 QString base64this(const std::string& param);
-QString mayBeBase64(const QString& original);
-QString base64Nullable(const QString& param);
+QString mayBeBase64(const QString& original, bool emptyAsNull = false);
+QString base64Nullable(const QString& param, bool emptyAsNull = false);
 QString nullOnZero(uint v);
 
 struct st_mysql;

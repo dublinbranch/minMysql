@@ -59,18 +59,21 @@ QString base64this(const string& param) {
 	return base64this(cheap);
 }
 
-QString mayBeBase64(const QString& original) {
+QString mayBeBase64(const QString& original, bool emptyAsNull) {
 	if (original == SQL_NULL) {
 		return original;
 	} else if (original.isEmpty()) {
+		if (emptyAsNull) {
+			return SQL_NULL;
+		}
 		return QSL("''");
 	} else {
 		return base64this(original);
 	}
 }
 
-QString base64Nullable(const QString& param) {
-	return mayBeBase64(param);
+QString base64Nullable(const QString& param, bool emptyAsNull) {
+	return mayBeBase64(param, emptyAsNull);
 }
 
 sqlRow DB::queryLine(const char* sql) const {
