@@ -356,8 +356,9 @@ DBConf::DBConf() {
 
 QByteArray DBConf::getDefaultDB() const {
 	if (defaultDB.isEmpty()) {
-		auto msg = QSL("default DB is sadly required to avoid mysql complain on certain operation!");
+		auto msg = QSL("default DB is sadly required to avoid mysql complain on certain operation!") + QStacker16Light();
 		qWarning().noquote() << msg;
+		cxaNoStack = true;
 		throw msg;
 	}
 	return defaultDB;
