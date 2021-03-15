@@ -264,6 +264,13 @@ struct DB {
 	void         setConf(const DBConf& value);
 
 	long getAffectedRows() const;
+	struct InternalState {
+		//This will hopefully help track down the disconnection issue
+		uint queryExecuted = 0;
+		uint reconnection  = 0;
+		bool NULL_as_EMPTY = false;
+	};
+	mutable mi_tls<InternalState> state;
 
       private:
 	bool   confSet = false;
@@ -275,17 +282,11 @@ struct DB {
 	//used for asyncs
 	mutable mi_tls<int>        signalMask;
 	mutable mi_tls<QByteArray> lastSQL;
-	struct InternalState {
-		//This will hopefully help track down the disconnection issue
-		uint queryExecuted = 0;
-		uint reconnection  = 0;
-	};
 	struct SharedState {
 		std::atomic<uint> busyConnection = 0;
 	};
 
-	mutable mi_tls<InternalState> state;
-	static SharedState            sharedState;
+	static SharedState sharedState;
 };
 
 using MYSQL_ROW = char**;

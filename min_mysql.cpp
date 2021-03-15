@@ -695,7 +695,11 @@ sqlResult DB::fetchResult(SQLLogger* sqlLogger) const {
 					//this is how sql NULL is signaled, instead of having a wrapper and check ALWAYS before access, we normally just ceck on result swap if a NULL has any sense here or not.
 					//Plus if you have the string NULL in a DB you are really looking for trouble
 					if (row[i] == nullptr && lengths[i] == 0) {
-						thisItem.insert(fields[i].name, BSQL_NULL);
+						if (state.get().NULL_as_EMPTY) {
+							thisItem.insert(fields[i].name, QByteArray());
+						} else {
+							thisItem.insert(fields[i].name, BSQL_NULL);
+						}
 					} else {
 						thisItem.insert(fields[i].name, QByteArray(row[i], static_cast<int>(lengths[i])));
 					}
