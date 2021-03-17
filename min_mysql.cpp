@@ -456,9 +456,10 @@ st_mysql* DB::connect() const {
 		                                    conf.getDefaultDB(),
 		                                    conf.port, conf.sock.constData(), flag);
 		if (connected == nullptr) {
-			auto msg = QSL("Mysql connection error (mysql_init). for %1 \n Error %2")
-			               .arg(conf.getInfo())
-			               .arg(mysql_error(conn));
+			state.get().lastError = QSL("Mysql connection error (mysql_init). for %1 \n Error %2")
+			                            .arg(conf.getInfo())
+			                            .arg(mysql_error(conn));
+			auto& msg = state.get().lastError;
 			mysql_close(conn);
 			messanger(msg, conf.connErrorVerbosity);
 			throw DBException(msg, DBException::Error::Connection);

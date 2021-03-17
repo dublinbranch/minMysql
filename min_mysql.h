@@ -266,9 +266,10 @@ struct DB {
 	long getAffectedRows() const;
 	struct InternalState {
 		//This will hopefully help track down the disconnection issue
-		uint queryExecuted = 0;
-		uint reconnection  = 0;
-		bool NULL_as_EMPTY = false;
+		uint    queryExecuted = 0;
+		uint    reconnection  = 0;
+		bool    NULL_as_EMPTY = false;
+		QString lastError;
 	};
 	mutable mi_tls<InternalState> state;
 
