@@ -456,10 +456,21 @@ st_mysql* DB::connect() const {
 		                                    conf.getDefaultDB(),
 		                                    conf.port, conf.sock.constData(), flag);
 		if (connected == nullptr) {
-			state.get().lastError = QSL("Mysql connection error (mysql_init). for %1 \n Error %2")
-			                            .arg(conf.getInfo())
-			                            .arg(mysql_error(conn));
+			//Whoever conceived those api need to search for help -.-
+			QString                         error = mysql_error(conn);
+			static const QRegularExpression reg(R"(\((\d*)\))");
+
+			if (auto match = reg.globalMatch(error); match.hasNext()) {
+				if (auto v = match.next().captured(1).toUInt(); v) {
+					error.append(QSL(" / ") + strerror(v));
+				}
+			}
+
 			auto& msg = state.get().lastError;
+			msg       = QSL("Mysql connection error (mysql_init). for %1 \n Error %2")
+			          .arg(conf.getInfo())
+			          .arg(error);
+
 			mysql_close(conn);
 			messanger(msg, conf.connErrorVerbosity);
 			throw DBException(msg, DBException::Error::Connection);
