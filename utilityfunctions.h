@@ -1,5 +1,5 @@
-#ifndef UTILITYFUNCTIONS_H
-#define UTILITYFUNCTIONS_H
+#ifndef MIN_MYSQL_UTILITYFUNCTIONS_H
+#define MIN_MYSQL_UTILITYFUNCTIONS_H
 
 #include "min_mysql.h"
 class DBDebugger : public DB {
