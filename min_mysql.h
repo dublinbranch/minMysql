@@ -174,7 +174,9 @@ struct DBConf {
 	QByteArray                pass;
 	QByteArray                user;
 	QByteArray                sock;
-	bool                      ssl = false;
+	bool                      ssl         = false;
+	//Usually set false for operation that do not have to be replicated
+	bool                      writeBinlog = true;
 	QList<QRegularExpression> warningSuppression;
 	uint                      port            = 3306;
 	bool                      logSql          = false;

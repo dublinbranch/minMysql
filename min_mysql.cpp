@@ -484,6 +484,9 @@ st_mysql* DB::connect() const {
 
 	query(QBL("SET @@SQL_MODE = 'STRICT_TRANS_TABLES,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';"));
 	query(QBL("SET time_zone='UTC'"));
+	if (!conf.writeBinlog) {
+		query(QBL("SET sql_log_bin = 0"));
+	}
 
 	return connPool;
 }
