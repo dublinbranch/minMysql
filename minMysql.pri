@@ -1,5 +1,7 @@
 LIBS += -lmariadb
 
+CONFIG += object_parallel_to_source
+
 HEADERS += \
 	$$PWD/MITLS.h \
 	$$PWD/const.h \
