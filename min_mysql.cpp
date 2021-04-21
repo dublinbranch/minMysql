@@ -421,7 +421,7 @@ st_mysql* DB::connect() const {
 		//sensibly speed things up
 		mysql_options(conn, MYSQL_OPT_COMPRESS, &trueNonSense);
 		//just spam every where to be sure is used
-		mysql_options(conn, MYSQL_SET_CHARSET_NAME, "utf8");
+		mysql_options(conn, MYSQL_SET_CHARSET_NAME, "utf8mb4");
 
 		my_bool falseNonSense = 0;
 
