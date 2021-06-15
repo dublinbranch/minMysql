@@ -170,11 +170,11 @@ struct SQLLogger {
 //class QRegularExpression;
 struct DBConf {
 	DBConf();
-	QByteArray                host = "127.0.0.1";
-	QByteArray                pass;
-	QByteArray                user;
-	QByteArray                sock;
-	bool                      ssl         = false;
+	QByteArray host = "127.0.0.1";
+	QByteArray pass;
+	QByteArray user;
+	QByteArray sock;
+	bool       ssl = false;
 	//Usually set false for operation that do not have to be replicated
 	bool                      writeBinlog = true;
 	QList<QRegularExpression> warningSuppression;
@@ -215,10 +215,12 @@ struct DB {
 	sqlResult query(const QString& sql) const;
 	sqlResult query(const QByteArray& sql) const;
 
-	sqlResult queryCache(const QString& sql, bool on = false, QString name = QString(), uint ttl = 3600);
-	sqlRow    queryCacheLine(const QString& sql, bool on = false, QString name = QString(), uint ttl = 3600, bool required = false);
+	[[deprecated("use queryCache2 - this one is problematic to use, and with redundant and never used param")]] sqlResult  queryCache(const QString& sql, bool on = false, QString name = QString(), uint ttl = 3600);
+	[[deprecated("use queryCacheLine2 - this one is problematic to use, and with redundant and never used param")]] sqlRow queryCacheLine(const QString& sql, bool on = false, QString name = QString(), uint ttl = 3600, bool required = false);
 
-	sqlRow    queryCacheLine(const QString& sql, uint ttl = 3600, bool required = false);
+	sqlRow queryCacheLine(const QString& sql, uint ttl = 3600, bool required = false);
+	sqlRow queryCacheLine2(const QString& sql, uint ttl = 3600, bool required = false);
+
 	sqlResult queryCache2(const QString& sql, uint ttl);
 
 	//This is to be used ONLY in case the query can have deadlock, and internally tries multiple times to insert data

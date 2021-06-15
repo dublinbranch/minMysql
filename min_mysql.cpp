@@ -182,36 +182,19 @@ sqlResult DB::query(const QByteArray& sql) const {
 }
 
 sqlResult DB::queryCache(const QString& sql, bool on, QString name, uint ttl) {
-	if (ttl) {
-		//small trick to avoid calling over and over the function
-		static bool fraud = mkdir("cachedSQL");
-		(void)fraud;
-
-		static std::mutex            lock;
-		std::scoped_lock<std::mutex> scoped(lock);
-
-		if (name.isEmpty()) {
-			name = "cachedSQL/" + sha1(sql);
-		}
-		sqlResult res;
-		if (on) {
-			if (auto file = fileUnSerialize(name, res, ttl); file.valid) {
-				return res;
-			}
-		}
-
-		lock.unlock();
-		res = query(sql);
-		lock.lock();
-		fileSerialize(name, res);
-		return res;
-	} else {
-		return query(sql);
-	}
+	(void)on;
+	(void)name;
+	return queryCache2(sql, ttl);
 }
 
 sqlRow DB::queryCacheLine(const QString& sql, bool on, QString name, uint ttl, bool required) {
-	auto res = queryCache(sql, on, name, ttl);
+	(void)on;
+	(void)name;
+	return queryCacheLine2(sql, ttl, required);
+}
+
+sqlRow DB::queryCacheLine2(const QString& sql, uint ttl, bool required) {
+	auto res = queryCache2(sql, ttl);
 	if (auto r = res.size(); r > 1) {
 		throw ExceptionV2(QSL("invalid number of row, expected 1, got").arg(r));
 	} else if (r == 1) {
@@ -226,11 +209,33 @@ sqlRow DB::queryCacheLine(const QString& sql, bool on, QString name, uint ttl, b
 }
 
 sqlRow DB::queryCacheLine(const QString& sql, uint ttl, bool required) {
-	return queryCacheLine(sql, ttl, QString(), ttl, required);
+	return queryCacheLine2(sql, ttl, required);
 }
 
 sqlResult DB::queryCache2(const QString& sql, uint ttl) {
-	return queryCache(sql, true, QString(), ttl);
+	if (ttl) {
+		//small trick to avoid calling over and over the function
+		static bool fraud = mkdir("cachedSQL");
+		(void)fraud;
+
+		QString                      name = "cachedSQL/" + sha1(sql);
+		static std::mutex            lock;
+		std::scoped_lock<std::mutex> scoped(lock);
+
+		sqlResult res;
+
+		if (auto file = fileUnSerialize(name, res, ttl); file.valid) {
+			return res;
+		}
+
+		lock.unlock();
+		res = query(sql);
+		lock.lock();
+		fileSerialize(name, res);
+		return res;
+	} else {
+		return query(sql);
+	}
 }
 
 sqlResult DB::queryDeadlockRepeater(const QByteArray& sql, uint maxTry) const {
