@@ -201,7 +201,7 @@ class FetchVisitor;
 struct DB {
       public:
 	DB() = default;
-	DB(const DBConf& conf);
+	DB(const DBConf& _conf);
 	~DB();
 	void      closeConn() const;
 	st_mysql* connect() const;

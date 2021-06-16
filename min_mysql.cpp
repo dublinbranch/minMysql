@@ -384,8 +384,8 @@ QString DBConf::getInfo(bool passwd) const {
 	return msg;
 }
 
-DB::DB(const DBConf& conf) {
-	setConf(conf);
+DB::DB(const DBConf& _conf) {
+	setConf(_conf);
 }
 
 DB::~DB() {
