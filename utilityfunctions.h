@@ -5,7 +5,7 @@
 class DBDebugger : public DB {
       public:
 	DBDebugger() = default;
-	DBDebugger(const DBConf& conf);
+	DBDebugger(const DBConf& _conf);
 
 	sqlResult getRunningQueries();
 	sqlResult getProcessList();

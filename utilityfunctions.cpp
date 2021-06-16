@@ -38,8 +38,8 @@ QString queryEssay(const sqlResult& res, bool brief) {
 	return msg;
 }
 
-DBDebugger::DBDebugger(const DBConf& conf) {
-	setConf(conf);
+DBDebugger::DBDebugger(const DBConf& _conf) {
+	setConf(_conf);
 }
 
 sqlResult DBDebugger::getRunningQueries() {
