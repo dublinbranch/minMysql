@@ -589,8 +589,8 @@ void SQLBuffering::flush() {
 	buffer.clear();
 }
 
-void SQLBuffering::setUseTRX(bool useTRX) {
-	this->useTRX = useTRX;
+void SQLBuffering::setUseTRX(bool _useTRX) {
+	this->useTRX = _useTRX;
 }
 
 void SQLBuffering::clear() {

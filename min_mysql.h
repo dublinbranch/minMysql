@@ -330,7 +330,7 @@ class SQLBuffering {
 	~SQLBuffering();
 	void append(const QString& sql);
 	void flush();
-	void setUseTRX(bool useTRX);
+	void setUseTRX(bool _useTRX);
 	void clear();
 };
 
