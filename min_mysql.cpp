@@ -808,14 +808,14 @@ static int somethingHappened(MYSQL* mysql, int status) {
 	else if (res < 0) {
 		return 0;
 	} else {
-		int status = 0;
+		int _status = 0;
 		if (pfd.revents & POLLIN)
-			status |= MYSQL_WAIT_READ;
+			_status |= MYSQL_WAIT_READ;
 		if (pfd.revents & POLLOUT)
-			status |= MYSQL_WAIT_WRITE;
+			_status |= MYSQL_WAIT_WRITE;
 		if (pfd.revents & POLLPRI)
-			status |= MYSQL_WAIT_EXCEPT;
-		return status;
+			_status |= MYSQL_WAIT_EXCEPT;
+		return _status;
 	}
 }
 
