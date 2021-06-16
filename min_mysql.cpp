@@ -931,9 +931,9 @@ bool Runnable::runnable(const QString& key, qint64 second) {
 	auto                 sql  = skel.arg(base64this(key));
 	auto                 res  = db.query(sql);
 	if (res.isEmpty() or res.at(0).value("lastRun", BZero).toLongLong() + second < now) {
-		static const QString skel = "INSERT INTO runnable SET operationCode = %1, lastRun = %2";
-		auto                 sql  = skel.arg(base64this(key)).arg(now);
-		db.query(sql);
+		static const QString skel      = "INSERT INTO runnable SET operationCode = %1, lastRun = %2";
+		auto                 insertSql = skel.arg(base64this(key)).arg(now);
+		db.query(insertSql);
 
 		return true;
 	} else {
